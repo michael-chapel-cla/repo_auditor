@@ -13,11 +13,13 @@ import {
   Typography,
   IconButton,
 } from "@mui/material";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import GroupIcon from "@mui/icons-material/Group";
-import MenuIcon from "@mui/icons-material/Menu";
-import ArticleIcon from "@mui/icons-material/Article";
+import {
+  Dashboard as DashboardIcon,
+  Assessment as AssessmentIcon,
+  Group as GroupIcon,
+  Menu as MenuIcon,
+  Article as ArticleIcon,
+} from "@mui/icons-material";
 
 const DRAWER_WIDTH = 220;
 

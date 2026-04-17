@@ -9,9 +9,11 @@ import {
   Divider,
   Chip,
 } from "@mui/material";
-import TerminalIcon from "@mui/icons-material/Terminal";
-import SmartToyIcon from "@mui/icons-material/SmartToy";
-import GitHubIcon from "@mui/icons-material/GitHub";
+import {
+  Terminal as TerminalIcon,
+  SmartToy as SmartToyIcon,
+  GitHub as GitHubIcon,
+} from "@mui/icons-material";
 
 const AGENT_TOOLS = [
   {

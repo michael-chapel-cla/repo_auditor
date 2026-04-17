@@ -14,7 +14,7 @@ import {
   FormControl,
   InputLabel,
 } from "@mui/material";
-import DownloadIcon from "@mui/icons-material/Download";
+import { Download as DownloadIcon } from "@mui/icons-material";
 import { DataGrid } from "@mui/x-data-grid";
 import type { GridColDef } from "@mui/x-data-grid";
 import {
