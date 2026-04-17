@@ -34,12 +34,68 @@ You are an expert code auditor. When asked to audit a repository:
    - `npx eslint --format json` for code quality
    - `npx depcheck --json` for unused dependencies
 
-4. **Write output** to `reports/{owner}_{repo}/{run-id}/`:
+4. **Collect contributor statistics** from the cloned workspace:
+
+   ```bash
+   WORKSPACE=workspace/owner_repo
+   git -C "$WORKSPACE" log \
+     --format="%ae|%an|%H|%aI" \
+     --numstat \
+     2>/dev/null || true
+   ```
+
+   Parse the output and aggregate by author email:
+   - `commits` — count of commit entries
+   - `additions` / `deletions` — summed from numstat lines
+   - `firstCommitAt` / `lastCommitAt` — earliest and most recent ISO date
+   - Skip or mark authors whose email matches `*[bot]*` as `isBot: true`
+
+   If `GITHUB_TOKEN` is available, enrich with the GitHub API:
+
+   ```bash
+   gh api repos/{owner}/{repo}/contributors?per_page=100
+   ```
+
+   Also generate a weekly commit timeline for the last 26 weeks:
+
+   ```bash
+   git -C "$WORKSPACE" log --format="%aI" --since="26 weeks ago" 2>/dev/null | \
+     awk '{print substr($0,1,10)}' | sort | uniq -c || true
+   ```
+
+   Write the result to `reports/{owner}_{repo}/{run-id}/contributors.json`:
+
+   ```json
+   {
+     "repoFullName": "owner/repo",
+     "generatedAt": "<ISO timestamp>",
+     "contributors": [
+       {
+         "email": "...",
+         "name": "...",
+         "commits": 42,
+         "additions": 1200,
+         "deletions": 400,
+         "firstCommitAt": "...",
+         "lastCommitAt": "...",
+         "isBot": false
+       }
+     ],
+     "commitTimeline": [{ "week": "2026-W01", "commits": 12 }],
+     "totalCommits": 0,
+     "activeContributors": 0
+   }
+   ```
+
+   Sort `contributors` by `commits` descending.
+
+5. **Write output** to `reports/{owner}_{repo}/{run-id}/`:
    - `results.json` — following schema in `scripts/report-schema.json`
+   - `contributors.json` — contributor stats (see step 4)
    - `report.md` — markdown summary
    - `report.html` — HTML report
 
-5. **Commit and push** the reports back to the repo (or upload as workflow artifacts).
+6. **Commit and push** the reports back to the repo (or upload as workflow artifacts).
 
 ## Output schema
 

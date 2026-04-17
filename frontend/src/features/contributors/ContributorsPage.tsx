@@ -42,7 +42,7 @@ export default function ContributorsPage() {
     setError(null);
     contributorsService
       .get(selectedRepo)
-      .then((data) => setContributors(data.contributors))
+      .then((data) => setContributors(data.contributors ?? []))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, [selectedRepo]);
@@ -57,7 +57,9 @@ export default function ContributorsPage() {
 
   return (
     <Box>
-      <Typography variant="h4" fontWeight="bold" gutterBottom>Contributors</Typography>
+      <Typography variant="h4" fontWeight="bold" gutterBottom>
+        Contributors
+      </Typography>
 
       <FormControl sx={{ minWidth: 300, mb: 3 }}>
         <InputLabel>Repository</InputLabel>
@@ -67,7 +69,9 @@ export default function ContributorsPage() {
           onChange={(e) => setSelectedRepo(e.target.value)}
         >
           {repos.map((r) => (
-            <MenuItem key={r} value={r}>{r}</MenuItem>
+            <MenuItem key={r} value={r}>
+              {r}
+            </MenuItem>
           ))}
         </Select>
       </FormControl>
@@ -77,28 +81,43 @@ export default function ContributorsPage() {
 
       {!loading && contributors.length > 0 && (
         <>
-          <Typography variant="h6" gutterBottom>Commit Activity (Top 10)</Typography>
+          <Typography variant="h6" gutterBottom>
+            Commit Activity (Top 10)
+          </Typography>
           <Box sx={{ height: 250, mb: 4 }}>
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <XAxis dataKey="name" />
                 <YAxis />
                 <Tooltip />
-                <Area type="monotone" dataKey="commits" stroke="#1a237e" fill="#e8eaf6" />
+                <Area
+                  type="monotone"
+                  dataKey="commits"
+                  stroke="#1a237e"
+                  fill="#e8eaf6"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </Box>
 
-          <Typography variant="h6" gutterBottom>Leaderboard</Typography>
+          <Typography variant="h6" gutterBottom>
+            Leaderboard
+          </Typography>
           <TableContainer component={Paper}>
             <Table size="small">
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#1a237e" }}>
                   <TableCell sx={{ color: "white" }}>#</TableCell>
                   <TableCell sx={{ color: "white" }}>Contributor</TableCell>
-                  <TableCell sx={{ color: "white" }} align="right">Commits</TableCell>
-                  <TableCell sx={{ color: "white" }} align="right">Additions</TableCell>
-                  <TableCell sx={{ color: "white" }} align="right">Deletions</TableCell>
+                  <TableCell sx={{ color: "white" }} align="right">
+                    Commits
+                  </TableCell>
+                  <TableCell sx={{ color: "white" }} align="right">
+                    Additions
+                  </TableCell>
+                  <TableCell sx={{ color: "white" }} align="right">
+                    Deletions
+                  </TableCell>
                   <TableCell sx={{ color: "white" }}>Last Commit</TableCell>
                 </TableRow>
               </TableHead>
@@ -108,14 +127,26 @@ export default function ContributorsPage() {
                     <TableCell>{i + 1}</TableCell>
                     <TableCell>
                       <Box>
-                        <Typography variant="body2" fontWeight="bold">{c.name}</Typography>
-                        <Typography variant="caption" color="text.secondary">{c.email}</Typography>
+                        <Typography variant="body2" fontWeight="bold">
+                          {c.name}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {c.email}
+                        </Typography>
                       </Box>
                     </TableCell>
                     <TableCell align="right">{c.commits}</TableCell>
-                    <TableCell align="right" sx={{ color: "#388e3c" }}>+{c.additions}</TableCell>
-                    <TableCell align="right" sx={{ color: "#d32f2f" }}>-{c.deletions}</TableCell>
-                    <TableCell>{new Date(c.lastCommitAt).toLocaleDateString()}</TableCell>
+                    <TableCell align="right" sx={{ color: "#388e3c" }}>
+                      {c.additions != null ? `+${c.additions}` : "—"}
+                    </TableCell>
+                    <TableCell align="right" sx={{ color: "#d32f2f" }}>
+                      {c.deletions != null ? `-${c.deletions}` : "—"}
+                    </TableCell>
+                    <TableCell>
+                      {c.lastCommitAt
+                        ? new Date(c.lastCommitAt).toLocaleDateString()
+                        : "—"}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -125,7 +156,9 @@ export default function ContributorsPage() {
       )}
 
       {!loading && contributors.length === 0 && !error && (
-        <Typography color="text.secondary">No contributor data available for this repository.</Typography>
+        <Typography color="text.secondary">
+          No contributor data available for this repository.
+        </Typography>
       )}
     </Box>
   );

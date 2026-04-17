@@ -11,12 +11,14 @@ export interface ContributorStats {
 }
 
 export const contributorsService = {
-  async get(repo?: string): Promise<{ repoFullName: string; contributors: ContributorStats[] }> {
+  async get(
+    repo?: string,
+  ): Promise<{ repoFullName: string; contributors: ContributorStats[] }> {
     const params = repo ? { repo } : {};
-    const { data } = await axios.get<{ repoFullName: string; contributors: ContributorStats[] }>(
-      "/api/contributors",
-      { params }
-    );
-    return data;
+    const { data } = await axios.get<{
+      results: { repoFullName: string; contributors: ContributorStats[] }[];
+    }>("/api/contributors", { params });
+    const entry = data.results[0];
+    return entry ?? { repoFullName: repo ?? "", contributors: [] };
   },
 };
