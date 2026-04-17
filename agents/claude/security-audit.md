@@ -52,12 +52,51 @@ semgrep --config .semgrep/ai-code-security.yml --json "$WORKSPACE" 2>/dev/null |
 
 Parse SARIF/JSON output. Map `ERROR` → `high`, `WARNING` → `medium`.
 
-### 4. Package safety check (npq-style)
+### 4. NPQ — package supply-chain safety
 
-For each package in `package.json` dependencies:
+Run [npq](https://github.com/lirantal/npq) against the packages declared in `package.json`. npq queries the npm registry to detect supply-chain risks **before** install.
 
-- Use the Fetch tool or bash curl to check `https://registry.npmjs.org/{package}` — if 404, flag as `severity: critical`, rule: `hallucinated-package`
-- Check weekly downloads from `https://api.npmjs.org/downloads/point/last-week/{package}` — if < 1000, flag as `severity: medium`, rule: `low-download-package`
+```bash
+if [ -f "$WORKSPACE/package.json" ]; then
+  # Extract all production + dev package names (no version ranges)
+  PKGS=$(node -e "
+    const p = JSON.parse(require('fs').readFileSync('$WORKSPACE/package.json'));
+    console.log(Object.keys({...(p.dependencies||{}), ...(p.devDependencies||{})}).join(' '));
+  ")
+  # Dry-run npq — outputs JSON marshaller lines for each failing check
+  cd "$WORKSPACE" && npx --yes npq@latest marshal -- $PKGS 2>/dev/null > "$OUT_DIR/npq-raw.json" || true
+fi
+```
+
+If `npx npq` is not available, fall back to checking each package via the npm registry API:
+
+```bash
+for pkg in $PKGS; do
+  curl -sf "https://registry.npmjs.org/$pkg" > /tmp/pkg.json 2>/dev/null || echo '{}' > /tmp/pkg.json
+  curl -sf "https://api.npmjs.org/downloads/point/last-week/$pkg" > /tmp/dl.json 2>/dev/null || echo '{"downloads":0}' > /tmp/dl.json
+done
+```
+
+Parse the raw output and map each signal to a finding. **Write npq findings to a separate `npq` result category**:
+
+| Signal                              | Severity   | Rule                    | Description                                                                              |
+| ----------------------------------- | ---------- | ----------------------- | ---------------------------------------------------------------------------------------- |
+| Package not found on registry (404) | `critical` | `npq-hallucinated`      | Package does not exist — possible dependency confusion or typosquatting attack           |
+| Package deprecated on npm           | `high`     | `npq-deprecated`        | Maintainer has marked this package as deprecated; may contain unpatched vulnerabilities  |
+| Weekly downloads < 1 000            | `medium`   | `npq-low-downloads`     | Very low download volume; higher risk of abandoned or malicious package                  |
+| Single maintainer                   | `medium`   | `npq-single-maintainer` | Only one maintainer — bus-factor risk and higher likelihood of account takeover          |
+| Package published < 24 h ago        | `high`     | `npq-new-package`       | Extremely fresh release; elevated risk of a typosquatting or supply-chain attack         |
+| No OSS license declared             | `medium`   | `npq-no-license`        | Absent license may block use in enterprise environments or indicate an untrusted package |
+
+For each finding use:
+
+- `category`: **`"npq"`**
+- `title`: `"npq: {packageName} — {signal description}"`
+- `file`: `"package.json"`
+- `source`: `"npq"`
+- `fix`: actionable remediation (e.g. `"npm install {saferAlternative}"` or `"Pin to a known-good version and monitor for updates"`)
+
+Save the raw npq output to **`$OUT_DIR/npq-raw.json`**.
 
 ### 5. AI code scan — read source files
 
@@ -145,5 +184,34 @@ Write **two** files:
 
 Also save the raw npm audit JSON to **`$OUT_DIR/npm-audit.json`** (the unmodified output of `npm audit --json`).
 
-Scoring (both categories): start at 100, subtract: critical=25, high=15, medium=7, low=3. Minimum 0.
+**`$OUT_DIR/npq-results.json`** — npq supply-chain findings in a separate category:
+
+```json
+{
+  "category": "npq",
+  "status": "passed|failed",
+  "score": 0-100,
+  "findings": [
+    {
+      "id": "<uuid>",
+      "category": "npq",
+      "severity": "critical|high|medium|low|info",
+      "title": "npq: {packageName} — {signal}",
+      "description": "...",
+      "file": "package.json",
+      "line": null,
+      "rule": "npq-deprecated|npq-low-downloads|npq-single-maintainer|npq-new-package|npq-no-license|npq-hallucinated",
+      "cwe": null,
+      "fix": "...",
+      "source": "npq"
+    }
+  ],
+  "durationMs": 0,
+  "timestamp": "<ISO>"
+}
+```
+
+Also save the raw npq output to **`$OUT_DIR/npq-raw.json`**.
+
+Scoring (all categories): start at 100, subtract: critical=25, high=15, medium=7, low=3. Minimum 0.
 Status: "failed" if any critical or high findings, "passed" otherwise.

@@ -51,6 +51,20 @@ const COLUMNS: GridColDef<Finding>[] = [
   { field: "fix", headerName: "Fix", flex: 1, minWidth: 200 },
 ];
 
+/** NPQ supply-chain specific columns — shows signal type, package, and remediation */
+const NPQ_COLUMNS: GridColDef<Finding>[] = [
+  {
+    field: "severity",
+    headerName: "Severity",
+    width: 110,
+    renderCell: ({ row }) => <SeverityChip severity={row.severity} />,
+  },
+  { field: "title", headerName: "Package / Signal", flex: 1, minWidth: 240 },
+  { field: "rule", headerName: "Signal", width: 200 },
+  { field: "description", headerName: "Detail", flex: 1, minWidth: 280 },
+  { field: "fix", headerName: "Remediation", flex: 1, minWidth: 200 },
+];
+
 export default function ResultsPage() {
   const { auditId: paramAuditId } = useParams<{ auditId?: string }>();
   const { results: allResults, loading: listLoading } = useResultsList();
@@ -216,7 +230,9 @@ export default function ResultsPage() {
 
           <DataGrid
             rows={findings}
-            columns={COLUMNS}
+            columns={
+              currentCategory?.category === "npq" ? NPQ_COLUMNS : COLUMNS
+            }
             autoHeight
             pageSizeOptions={[25, 50, 100]}
             initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}

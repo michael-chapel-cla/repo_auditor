@@ -54,7 +54,9 @@
             "security": { "type": "integer" },
             "quality": { "type": "integer" },
             "api": { "type": "integer" },
-            "db": { "type": "integer" }
+            "db": { "type": "integer" },
+            "npm": { "type": "integer" },
+            "npq": { "type": "integer" }
           }
         }
       }
@@ -67,7 +69,7 @@
         "properties": {
           "category": {
             "type": "string",
-            "enum": ["security", "quality", "api", "db", "npm"]
+            "enum": ["security", "quality", "api", "db", "npm", "npq"]
           },
           "status": { "type": "string", "enum": ["passed", "failed", "error"] },
           "score": { "type": "integer", "minimum": 0, "maximum": 100 },
@@ -89,7 +91,7 @@
                 "id": { "type": "string" },
                 "category": {
                   "type": "string",
-                  "enum": ["security", "quality", "api", "db", "npm"]
+                  "enum": ["security", "quality", "api", "db", "npm", "npq"]
                 },
                 "severity": {
                   "type": "string",
@@ -106,6 +108,7 @@
                   "type": "string",
                   "enum": [
                     "npm-audit",
+                    "npq",
                     "gitleaks",
                     "semgrep",
                     "ai",

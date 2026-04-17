@@ -45,7 +45,7 @@ Prerequisite: `gh auth login` must have been run once. The `gh` CLI OAuth token 
 Invoke each sub-audit in sequence, passing `$WORKSPACE` and `$OUT_DIR`. Read the relevant context doc before each audit:
 
 1. **Security Audit** — read `docs/context/01-security.md`, then follow `agents/claude/security-audit.md`
-   - Outputs: `security-results.json`, `npm-results.json`, `npm-audit.json`
+   - Outputs: `security-results.json`, `npm-results.json`, `npm-audit.json`, `npq-results.json`, `npq-raw.json`
 2. **Quality Audit** — read `docs/context/02-code-quality.md`, then follow `agents/claude/quality-audit.md`
 3. **API Audit** — read `docs/context/03-api-standards.md`, then follow `agents/claude/api-audit.md`
 4. **DB Audit** — read `docs/context/04-db-migrations.md`, then follow `agents/claude/db-audit.md`
@@ -59,12 +59,13 @@ After all sub-agents complete, read each category's output JSON from `$OUT_DIR/`
 
 - `security-results.json`
 - `npm-results.json` (npm dependency vulnerabilities — separate `npm` category)
+- `npq-results.json` (supply-chain safety signals — separate `npq` category)
 - `quality-results.json`
 - `api-results.json`
 - `db-results.json`
 - `contributors.json`
 
-Merge into a single `results.json` matching the schema in `scripts/report-schema.json`. The `npm` category appears as its own entry in `results[]` alongside security/quality/api/db.
+Merge into a single `results.json` matching the schema in `scripts/report-schema.json`. The `npm` and `npq` categories each appear as their own entries in `results[]` alongside security/quality/api/db.
 
 Calculate `summary`:
 

@@ -20,6 +20,7 @@ import type { AuditListItem } from "../../services/results.service.ts";
 const CATEGORY_LABELS: Record<string, string> = {
   security: "SEC",
   npm: "NPM",
+  npq: "NPQ",
   quality: "QUAL",
   api: "API",
   db: "DB",
@@ -28,6 +29,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 const CATEGORY_COLORS: Record<string, string> = {
   security: "#c62828",
   npm: "#e65100",
+  npq: "#ad1457",
   quality: "#1565c0",
   api: "#6a1b9a",
   db: "#2e7d32",

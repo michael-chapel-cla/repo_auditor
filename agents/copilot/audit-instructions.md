@@ -29,6 +29,7 @@ You are an expert code auditor. When asked to audit a repository:
 
 3. **Run audit checks** using available shell tools:
    - `npm audit --json` for dependency vulnerabilities — see private registry note below
+   - `npx --yes npq@latest marshal` for supply-chain signals (deprecated, low downloads, single maintainer, new package, no license, missing from registry). Map each signal to the `npq` findings category with `source: "npq"`. Save raw output to `npq-raw.json`.
    - `semgrep --config .semgrep/ai-code-security.yml` for code patterns
    - Read files directly for AI-powered analysis
    - `npx eslint --format json` for code quality
@@ -110,8 +111,9 @@ You are an expert code auditor. When asked to audit a repository:
    Sort `contributors` by `commits` descending.
 
 5. **Write output** to `reports/{owner}_{repo}/{run-id}/`:
-   - `results.json` — following schema in `scripts/report-schema.json`; include `npm` as a separate category in `results[]`
+   - `results.json` — following schema in `scripts/report-schema.json`; include `npm` and `npq` as separate categories in `results[]`
    - `npm-audit.json` — raw unmodified output of `npm audit --json` (preserved for UI display)
+   - `npq-raw.json` — raw npq marshal output
    - `contributors.json` — contributor stats (see step 4)
    - `report.md` — markdown summary
    - `report.html` — HTML report

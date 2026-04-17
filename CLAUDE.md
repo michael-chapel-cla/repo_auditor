@@ -49,13 +49,14 @@ docs/context/         LLM-optimized rule sets agents load before each audit
 
 `results.json` contains one entry per category in `results[]`:
 
-| Category   | Source                       | Notes                                                    |
-| ---------- | ---------------------------- | -------------------------------------------------------- |
-| `security` | AI scan + gitleaks + semgrep | Static/AI findings — no npm vulns                        |
-| `npm`      | `npm audit --json`           | Dep vulnerabilities; raw output also in `npm-audit.json` |
-| `quality`  | ESLint, tsc, depcheck        | Code quality                                             |
-| `api`      | OpenAPI, auth, CORS checks   | API compliance                                           |
-| `db`       | Migration file analysis      | DB safety                                                |
+| Category   | Source                       | Notes                                                                                                                                    |
+| ---------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `security` | AI scan + gitleaks + semgrep | Static/AI findings — no npm vulns                                                                                                        |
+| `npm`      | `npm audit --json`           | Dep vulnerabilities; raw output also in `npm-audit.json`                                                                                 |
+| `npq`      | `npx npq marshal`            | Supply-chain signals (deprecated, low downloads, single maintainer, new package, no license, hallucinated); raw output in `npq-raw.json` |
+| `quality`  | ESLint, tsc, depcheck        | Code quality                                                                                                                             |
+| `api`      | OpenAPI, auth, CORS checks   | API compliance                                                                                                                           |
+| `db`       | Migration file analysis      | DB safety                                                                                                                                |
 
 **Private registry**: if the target repo's `.npmrc` uses `${NPM_TOKEN}`, set `NPM_TOKEN` in `.env` before running. Without it, npm audit is skipped with an `info` finding.
 

@@ -29,6 +29,13 @@ You are an expert code auditor with access to the filesystem and shell.
 ### Security Checks
 
 - Run `npm audit --json` if `package.json` exists
+- Run `npx --yes npq@latest marshal -- $(node -e "const p=JSON.parse(require('fs').readFileSync('package.json')); console.log(Object.keys({...(p.dependencies||{}),(p.devDependencies||{})}).join(' '))")` in the workspace and save to `npq-raw.json`. Map signals to an `npq` findings category:
+  - 404 from registry → `critical`, rule `npq-hallucinated`
+  - deprecated → `high`, rule `npq-deprecated`
+  - downloads < 1000/week → `medium`, rule `npq-low-downloads`
+  - single maintainer → `medium`, rule `npq-single-maintainer`
+  - published < 24 h ago → `high`, rule `npq-new-package`
+  - no license → `medium`, rule `npq-no-license`
 - Run `gitleaks detect --source workspace/{slug} --report-format json --no-git --exit-code 0`
 - Run `semgrep --config .semgrep/ai-code-security.yml --json workspace/{slug}`
 - Read source files and identify: hardcoded secrets, SQL injection, command injection, insecure randomness, JWT issues, XSS, path traversal
@@ -59,7 +66,9 @@ Follow `docs/context/04-db-migrations.md`:
 - Check for SELECT \*, missing transactions, parameterized queries
 
 5. Write all results to `reports/{slug}/{uuid}/` as:
-   - `results.json` — structured findings following `scripts/report-schema.json`
+   - `results.json` — structured findings following `scripts/report-schema.json`; include `npm` and `npq` as separate categories in `results[]`
+   - `npm-audit.json` — raw unmodified output of `npm audit --json`
+   - `npq-raw.json` — raw npq marshal output
    - `report.md` — human-readable markdown report
    - `report.html` — HTML report with color-coded severity
 
