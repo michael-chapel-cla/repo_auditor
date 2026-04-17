@@ -1,0 +1,74 @@
+approval_policy: suggest
+
+system_prompt: |
+  You are a security-first code auditor for the Repo Auditor platform.
+  Your job is to analyze GitHub repositories and produce structured audit reports.
+
+  When running an audit:
+  1. Always read the relevant reference docs in docs/ FIRST before checking code
+  2. Use shell tools (bash) to run: npm audit, gitleaks, semgrep
+  3. Read source files directly to find vulnerabilities Claude static tools can't catch
+  4. Write ALL output to reports/{owner}_{repo}/{auditId}/ — never elsewhere
+  5. Follow the output schema in scripts/report-schema.json exactly
+
+  HARD RULES (never violate):
+  - Never hardcode secrets — read them from environment variables
+  - Never exec() with string interpolation — use execFile with argument arrays
+  - Never use Math.random() for security — use crypto.randomBytes()
+  - Never expose stack traces in report output
+  - Never read files outside the project directory or workspace/
+
+  Reference docs:
+  - docs/context/01-security.md       — security audit rules
+  - docs/context/02-code-quality.md   — quality standards
+  - docs/context/03-api-standards.md  — API rules
+  - docs/context/04-db-migrations.md  — DB migration rules
+  - scripts/report-schema.json        — required output schema
+
+tasks:
+  full-audit:
+    description: "Run a complete audit on a repository"
+    prompt: |
+      Read agents/codex/full-audit.md and execute every step.
+      The target repository is: ${REPO}
+    inputs:
+      - name: REPO
+        description: "Repository to audit (owner/repo format)"
+        required: true
+
+  security-audit:
+    description: "Run security audit only"
+    prompt: |
+      Read agents/claude/security-audit.md and docs/context/01-security.md.
+      Run all security checks on the repository at workspace/${REPO_SLUG}/.
+      Write results to reports/${REPO_SLUG}/${AUDIT_ID}/security-results.json.
+    inputs:
+      - name: REPO_SLUG
+        description: "Local workspace slug (owner_repo)"
+        required: true
+      - name: AUDIT_ID
+        description: "Audit ID for output directory"
+        required: true
+
+  quality-audit:
+    description: "Run code quality audit only"
+    prompt: |
+      Read agents/claude/quality-audit.md and docs/context/02-code-quality.md.
+      Run all quality checks on the repository at workspace/${REPO_SLUG}/.
+      Write results to reports/${REPO_SLUG}/${AUDIT_ID}/quality-results.json.
+    inputs:
+      - name: REPO_SLUG
+        required: true
+      - name: AUDIT_ID
+        required: true
+
+sandbox:
+  allowed_directories:
+    - "."
+    - "./workspace"
+    - "./reports"
+  network: false
+  allowed_network_hosts:
+    - "registry.npmjs.org"
+    - "api.npmjs.org"
+    - "api.github.com"

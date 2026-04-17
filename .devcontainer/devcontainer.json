@@ -1,0 +1,55 @@
+{
+  "name": "Repo Auditor",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+
+  "features": {
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.11",
+      "installTools": false
+    }
+  },
+
+  "postCreateCommand": "bash /workspace/scripts/bootstrap.sh",
+
+  "forwardPorts": [5173, 4000, 3000, 1433],
+  "portsAttributes": {
+    "5173": { "label": "Frontend Dev (Vite)" },
+    "4000": { "label": "Audit API Server" },
+    "3000": { "label": "Frontend Production" },
+    "1433": { "label": "MSSQL (optional)" }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens",
+        "humao.rest-client",
+        "redhat.vscode-yaml",
+        "42crunch.vscode-openapi",
+        "returntocorp.semgrep",
+        "ms-vscode.vscode-typescript-next"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "typescript.tsdk": "node_modules/typescript/lib"
+      }
+    }
+  },
+
+  "remoteEnv": {
+    "NODE_ENV": "development",
+    "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
+    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+  }
+}

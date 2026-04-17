@@ -1,0 +1,24 @@
+{
+  "name": "repo-auditor",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "engine",
+    "api",
+    "frontend"
+  ],
+  "scripts": {
+    "bootstrap": "npm install",
+    "audit:claude": "bash scripts/run-with-claude.sh",
+    "audit:codex": "bash scripts/run-with-codex.sh",
+    "audit:copilot": "bash scripts/run-with-copilot.sh",
+    "dev:api": "npm run dev --workspace=api",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

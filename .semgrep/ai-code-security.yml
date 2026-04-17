@@ -1,0 +1,137 @@
+rules:
+  # Hardcoded secrets
+  - id: hardcoded-api-key
+    patterns:
+      - pattern: |
+          const $VAR = "sk-..."
+      - pattern: |
+          const $VAR = "ghp_..."
+      - pattern: |
+          apiKey: "..."
+    message: Hardcoded API key detected. Use environment variables instead.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: hardcoded-password
+    pattern: |
+      password: "$PASS"
+    message: Hardcoded password in source code. Use environment variables or secrets manager.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # SQL injection
+  - id: sql-string-concat
+    patterns:
+      - pattern: |
+          $QUERY = "SELECT" + $INPUT
+      - pattern: |
+          $QUERY = `SELECT ... ${$INPUT} ...`
+      - pattern: |
+          db.query("..." + $VAR)
+      - pattern: |
+          db.query(`...${$VAR}...`)
+    message: Potential SQL injection via string concatenation. Use parameterized queries.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # Command injection
+  - id: exec-string-interpolation
+    patterns:
+      - pattern: exec(`...${ ... }...`)
+      - pattern: exec("..." + $VAR)
+      - pattern: execSync(`...${...}...`)
+    message: Potential command injection via exec() with interpolated string. Use execFile() with argument array.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  - id: prefer-execfile
+    pattern: |
+      import { exec } from "child_process"
+    message: Prefer execFile() over exec() to avoid shell injection. Import execFile instead.
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  # Insecure randomness
+  - id: math-random-security
+    patterns:
+      - pattern: |
+          token = Math.random()
+      - pattern: |
+          secret = Math.random()
+      - pattern: |
+          id = Math.random().toString(...)
+    message: Math.random() is not cryptographically secure. Use crypto.randomBytes().
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # JWT without algorithm
+  - id: jwt-no-algorithm
+    pattern: |
+      jwt.verify($TOKEN, $SECRET)
+    message: jwt.verify() called without explicit algorithms option. Add { algorithms: ['RS256'] } to prevent algorithm confusion attacks.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # XSS via innerHTML
+  - id: innerhtml-assignment
+    pattern: |
+      $EL.innerHTML = $VAL
+    message: Assignment to innerHTML can cause XSS. Use textContent or a sanitization library.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # Path traversal
+  - id: path-traversal-join
+    patterns:
+      - pattern: |
+          path.join($BASE, $REQ.params.$PARAM)
+      - pattern: |
+          path.join($BASE, $REQ.query.$PARAM)
+      - pattern: |
+          path.join($BASE, $REQ.body.$PARAM)
+    message: Potential path traversal via user-supplied path parameter. Validate and resolve against a bounded root.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # Error detail leakage
+  - id: stack-trace-in-response
+    patterns:
+      - pattern: |
+          res.json({ error: $ERR.stack })
+      - pattern: |
+          res.send($ERR.stack)
+      - pattern: |
+          reply.send({ stack: $ERR.stack })
+    message: Stack trace exposed in HTTP response. Return a generic error message to callers.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # Prompt injection defense
+  - id: user-content-in-system-prompt
+    patterns:
+      - pattern: |
+          { role: "system", content: `...${ $REQ.body.$X }...` }
+      - pattern: |
+          { role: "system", content: "..." + $USER_INPUT }
+    message: User-controlled content interpolated into AI system prompt. This enables prompt injection. Keep system prompts static.
+    languages: [javascript, typescript]
+    severity: ERROR
+
+  # Dangerous React patterns
+  - id: dangerous-set-inner-html
+    pattern: |
+      dangerouslySetInnerHTML={{ __html: $VAL }}
+    message: dangerouslySetInnerHTML used without explicit sanitization. Sanitize content with DOMPurify first.
+    languages: [javascript, typescript]
+    severity: WARNING
+
+  # Wildcard CORS
+  - id: wildcard-cors
+    patterns:
+      - pattern: |
+          origin: "*"
+      - pattern: |
+          "Access-Control-Allow-Origin": "*"
+    message: Wildcard CORS origin allows any site to make credentialed requests. Restrict to specific origins in production.
+    languages: [javascript, typescript]
+    severity: WARNING

@@ -1,0 +1,351 @@
+openapi: "3.0.3"
+info:
+  title: Repo Auditor API
+  version: "1.0.0"
+  description: REST API for triggering repository audits and retrieving results.
+
+servers:
+  - url: http://localhost:4000
+    description: Local development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      operationId: getHealth
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /api/v1/audits:
+    post:
+      summary: Trigger a repository audit
+      operationId: triggerAudit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TriggerAuditRequest"
+            examples:
+              single-repo:
+                value: { "repo": "owner/myrepo" }
+              all-repos:
+                value: { "all": true }
+      responses:
+        "201":
+          description: Audit started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuditStartedResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/results:
+    get:
+      summary: List all completed audits
+      operationId: listResults
+      responses:
+        "200":
+          description: List of audit results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AuditSummaryItem"
+
+  /api/v1/results/{auditId}:
+    get:
+      summary: Get full audit result
+      operationId: getResult
+      parameters:
+        - name: auditId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Audit ID returned from POST /api/v1/audits
+      responses:
+        "200":
+          description: Full audit result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RepoAuditResult"
+        "404":
+          description: Audit not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/reports/{auditId}/{format}:
+    get:
+      summary: Download audit report
+      operationId: getReport
+      parameters:
+        - name: auditId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [md, html]
+          description: Report format — md for Markdown, html for HTML
+      responses:
+        "200":
+          description: Report file content
+          content:
+            text/markdown:
+              schema:
+                type: string
+            text/html:
+              schema:
+                type: string
+        "404":
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /api/v1/contributors:
+    get:
+      summary: Get contributor statistics
+      operationId: getContributors
+      parameters:
+        - name: repo
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by repo (owner/repo format)
+      responses:
+        "200":
+          description: Contributor statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContributorsResponse"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          example: ok
+        timestamp:
+          type: string
+          format: date-time
+
+    TriggerAuditRequest:
+      type: object
+      properties:
+        repo:
+          type: string
+          pattern: "^[\\w.-]+/[\\w.-]+$"
+          example: owner/myrepo
+        all:
+          type: boolean
+
+    AuditStartedResponse:
+      type: object
+      required: [auditId, status, message]
+      properties:
+        auditId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          example: running
+        message:
+          type: string
+
+    AuditSummaryItem:
+      type: object
+      properties:
+        auditId:
+          type: string
+          format: uuid
+        repoFullName:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        summary:
+          $ref: "#/components/schemas/AuditSummary"
+
+    AuditSummary:
+      type: object
+      properties:
+        overallScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        totalFindings:
+          type: integer
+        riskLevel:
+          type: string
+          enum: [critical, high, medium, low, clean]
+        bySeverity:
+          type: object
+          additionalProperties:
+            type: integer
+        byCategory:
+          type: object
+          additionalProperties:
+            type: integer
+
+    RepoAuditResult:
+      type: object
+      properties:
+        auditId:
+          type: string
+          format: uuid
+        repoFullName:
+          type: string
+        status:
+          type: string
+          enum: [running, complete, error]
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        summary:
+          $ref: "#/components/schemas/AuditSummary"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditResult"
+
+    AuditResult:
+      type: object
+      properties:
+        category:
+          type: string
+          enum: [security, quality, api, db]
+        status:
+          type: string
+          enum: [passed, failed, error]
+        score:
+          type: integer
+        findings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Finding"
+
+    Finding:
+      type: object
+      required: [id, category, severity, title, description, source]
+      properties:
+        id:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [security, quality, api, db]
+        severity:
+          type: string
+          enum: [critical, high, medium, low, info]
+        title:
+          type: string
+        description:
+          type: string
+        file:
+          type: string
+        line:
+          type: integer
+        rule:
+          type: string
+        cwe:
+          type: string
+        fix:
+          type: string
+        source:
+          type: string
+
+    ContributorsResponse:
+      type: object
+      properties:
+        repoFullName:
+          type: string
+        auditId:
+          type: string
+        contributors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContributorStats"
+
+    ContributorStats:
+      type: object
+      properties:
+        email:
+          type: string
+        name:
+          type: string
+        commits:
+          type: integer
+        additions:
+          type: integer
+        deletions:
+          type: integer
+        firstCommitAt:
+          type: string
+          format: date-time
+        lastCommitAt:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId, timestamp]
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            requestId:
+              type: string
+            timestamp:
+              type: string
+              format: date-time

@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RepoAuditResult",
+  "description": "Output schema all audit agents must produce",
+  "type": "object",
+  "required": ["auditId", "repoFullName", "status", "startedAt", "summary", "results"],
+  "properties": {
+    "auditId": { "type": "string", "format": "uuid" },
+    "repoFullName": { "type": "string", "example": "owner/repo" },
+    "status": { "type": "string", "enum": ["running", "complete", "error"] },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "agentTool": { "type": "string", "enum": ["claude", "codex", "copilot"], "description": "Which AI tool ran this audit" },
+    "summary": {
+      "type": "object",
+      "required": ["overallScore", "totalFindings", "bySeverity", "byCategory", "riskLevel"],
+      "properties": {
+        "overallScore": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "totalFindings": { "type": "integer", "minimum": 0 },
+        "riskLevel": { "type": "string", "enum": ["critical", "high", "medium", "low", "clean"] },
+        "bySeverity": {
+          "type": "object",
+          "properties": {
+            "critical": { "type": "integer" },
+            "high": { "type": "integer" },
+            "medium": { "type": "integer" },
+            "low": { "type": "integer" },
+            "info": { "type": "integer" }
+          }
+        },
+        "byCategory": {
+          "type": "object",
+          "properties": {
+            "security": { "type": "integer" },
+            "quality": { "type": "integer" },
+            "api": { "type": "integer" },
+            "db": { "type": "integer" }
+          }
+        }
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "status", "score", "findings"],
+        "properties": {
+          "category": { "type": "string", "enum": ["security", "quality", "api", "db"] },
+          "status": { "type": "string", "enum": ["passed", "failed", "error"] },
+          "score": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "durationMs": { "type": "integer" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "category", "severity", "title", "description", "source"],
+              "properties": {
+                "id": { "type": "string" },
+                "category": { "type": "string", "enum": ["security", "quality", "api", "db"] },
+                "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+                "title": { "type": "string" },
+                "description": { "type": "string" },
+                "file": { "type": "string" },
+                "line": { "type": "integer" },
+                "rule": { "type": "string" },
+                "cwe": { "type": "string", "pattern": "^CWE-[0-9]+$" },
+                "fix": { "type": "string" },
+                "source": {
+                  "type": "string",
+                  "enum": ["npm-audit", "gitleaks", "semgrep", "ai", "eslint", "static", "depcheck", "tsc", "git"]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "contributors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string" },
+          "name": { "type": "string" },
+          "commits": { "type": "integer" },
+          "additions": { "type": "integer" },
+          "deletions": { "type": "integer" },
+          "firstCommitAt": { "type": "string", "format": "date-time" },
+          "lastCommitAt": { "type": "string", "format": "date-time" },
+          "isBot": { "type": "boolean" }
+        }
+      }
+    },
+    "commitTimeline": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "week": { "type": "string", "pattern": "^[0-9]{4}-W[0-9]{2}$" },
+          "commits": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

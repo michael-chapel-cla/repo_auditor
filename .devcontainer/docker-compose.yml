@@ -1,0 +1,34 @@
+version: "3.8"
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/typescript-node:20-bullseye
+    volumes:
+      - ..:/workspace:cached
+    command: sleep infinity
+    environment:
+      - NODE_ENV=development
+    networks:
+      - auditor
+
+  # Optional MSSQL sidecar — enable with: docker compose --profile db up
+  sqlserver:
+    profiles: ["db"]
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "${SA_PASSWORD:-Dev_Password_123}"
+      MSSQL_PID: Developer
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    networks:
+      - auditor
+
+networks:
+  auditor:
+    driver: bridge
+
+volumes:
+  sqlserver-data:
