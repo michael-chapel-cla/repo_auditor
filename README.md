@@ -26,17 +26,17 @@ Frontend (React + MUI)
 
 ## Prerequisites
 
-| Tool | Required for | Install |
-|------|-------------|---------|
-| Node.js ≥ 20 | API server + frontend | [nodejs.org](https://nodejs.org) |
-| npm ≥ 10 | Workspace dependencies | bundled with Node |
-| claude CLI | Claude Code audits | `npm install -g @anthropic-ai/claude-code` |
-| git | Cloning target repos | system package |
-| semgrep | Static security scan | `pip install semgrep` or `npm install -g semgrep` |
-| gitleaks | Secrets detection | see bootstrap.sh or [gitleaks.io](https://gitleaks.io) |
-| codex CLI | OpenAI Codex audits (optional) | `npm install -g @openai/codex` |
-| gh CLI | Copilot/Actions audits (optional) | [cli.github.com](https://cli.github.com) |
-| Java 17 | Flyway DB audits (optional) | system package |
+| Tool         | Required for                      | Install                                                |
+| ------------ | --------------------------------- | ------------------------------------------------------ |
+| Node.js ≥ 20 | API server + frontend             | [nodejs.org](https://nodejs.org)                       |
+| npm ≥ 10     | Workspace dependencies            | bundled with Node                                      |
+| claude CLI   | Claude Code audits                | `npm install -g @anthropic-ai/claude-code`             |
+| git          | Cloning target repos              | system package                                         |
+| semgrep      | Static security scan              | `pip install semgrep` or `npm install -g semgrep`      |
+| gitleaks     | Secrets detection                 | see bootstrap.sh or [gitleaks.io](https://gitleaks.io) |
+| codex CLI    | OpenAI Codex audits (optional)    | `npm install -g @openai/codex`                         |
+| gh CLI       | Copilot/Actions audits (optional) | [cli.github.com](https://cli.github.com)               |
+| Java 17      | Flyway DB audits (optional)       | system package                                         |
 
 ---
 
@@ -209,23 +209,23 @@ repo_auditor/
 
 Each audit produces findings with a severity score (starting at 100, penalties applied per finding).
 
-| Category | Agent file | Slash command | What it checks |
-|----------|-----------|---------------|----------------|
-| Security | `agents/claude/security-audit.md` | `/security-audit` | npm audit, gitleaks, Semgrep, AI code scan (injection, secrets, JWT, XSS, path traversal) |
-| Code Quality | `agents/claude/quality-audit.md` | `/quality-audit` | ESLint, test coverage, console.log, unused deps, TypeScript any, component size, DRY/SOLID |
-| API Standards | `agents/claude/api-audit.md` | `/api-audit` | OpenAPI spec, URI versioning, HTTP methods, status codes, auth, CORS, rate limiting, security headers |
-| DB Migrations | `agents/claude/db-audit.md` | `/db-audit` | Flyway naming, duplicate versions, edited migrations, SQL injection, transactions, DROP safeguards |
-| Contributors | `agents/claude/contributors.md` | (part of full-audit) | Commit stats per author, weekly activity timeline |
+| Category      | Agent file                        | Slash command        | What it checks                                                                                        |
+| ------------- | --------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- |
+| Security      | `agents/claude/security-audit.md` | `/security-audit`    | npm audit, gitleaks, Semgrep, AI code scan (injection, secrets, JWT, XSS, path traversal)             |
+| Code Quality  | `agents/claude/quality-audit.md`  | `/quality-audit`     | ESLint, test coverage, console.log, unused deps, TypeScript any, component size, DRY/SOLID            |
+| API Standards | `agents/claude/api-audit.md`      | `/api-audit`         | OpenAPI spec, URI versioning, HTTP methods, status codes, auth, CORS, rate limiting, security headers |
+| DB Migrations | `agents/claude/db-audit.md`       | `/db-audit`          | Flyway naming, duplicate versions, edited migrations, SQL injection, transactions, DROP safeguards    |
+| Contributors  | `agents/claude/contributors.md`   | (part of full-audit) | Commit stats per author, weekly activity timeline                                                     |
 
 ### Severity scale
 
-| Severity | Score penalty | Meaning |
-|----------|--------------|---------|
-| CRITICAL | -25 | Must fix before merge. Exploit possible now. |
-| HIGH | -15 | Fix this sprint. Significant risk. |
-| MEDIUM | -7 | Fix soon. Moderate risk or standards violation. |
-| LOW | -3 | Fix when convenient. Minor issue. |
-| INFO | 0 | Note for awareness. No action required. |
+| Severity | Score penalty | Meaning                                         |
+| -------- | ------------- | ----------------------------------------------- |
+| CRITICAL | -25           | Must fix before merge. Exploit possible now.    |
+| HIGH     | -15           | Fix this sprint. Significant risk.              |
+| MEDIUM   | -7            | Fix soon. Moderate risk or standards violation. |
+| LOW      | -3            | Fix when convenient. Minor issue.               |
+| INFO     | 0             | Note for awareness. No action required.         |
 
 ---
 
@@ -341,8 +341,10 @@ codex --task agents/codex/full-audit.md -- owner/repo
 Open Copilot Chat and paste:
 
 ```
-@workspace Run a full repository audit on owner/repo following the instructions in agents/copilot/audit-instructions.md
+Run a full repository audit on owner/repo following the instructions in agents/copilot/audit-instructions.md
 ```
+
+> **Tip:** In VS Code Copilot Chat drop the `@workspace` prefix — the agent already has workspace context. On github.com use the full `@workspace` form.
 
 For individual categories:
 
@@ -386,13 +388,13 @@ Reports are uploaded as workflow artifacts (retained 30 days) and are not pushed
 
 The API server (`npm run dev:api`) serves reports on port 4000:
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/reports` | List all audit results (summary only) |
-| GET | `/api/reports/:auditId` | Full results JSON for one audit |
-| GET | `/api/reports/:auditId/report.md` | Markdown report download |
-| GET | `/api/reports/:auditId/report.html` | HTML report download |
-| GET | `/api/contributors` | Latest contributor stats per repo |
+| Method | Path                                | Description                           |
+| ------ | ----------------------------------- | ------------------------------------- |
+| GET    | `/api/reports`                      | List all audit results (summary only) |
+| GET    | `/api/reports/:auditId`             | Full results JSON for one audit       |
+| GET    | `/api/reports/:auditId/report.md`   | Markdown report download              |
+| GET    | `/api/reports/:auditId/report.html` | HTML report download                  |
+| GET    | `/api/contributors`                 | Latest contributor stats per repo     |
 
 The server also serves the built frontend from `frontend/dist/` with SPA fallback.
 
@@ -413,12 +415,12 @@ npm run lint           # ESLint across all workspaces
 
 ### Frontend pages
 
-| Route | Page | Description |
-|-------|------|-------------|
-| `/dashboard` | Dashboard | Health score cards for all audited repos |
-| `/audits` | How to audit | Instructions for running each agent |
-| `/results/:auditId` | Results | Findings table with severity filters + bar chart |
-| `/contributors` | Contributors | Commit timeline (Recharts area chart) + leaderboard |
+| Route               | Page         | Description                                         |
+| ------------------- | ------------ | --------------------------------------------------- |
+| `/dashboard`        | Dashboard    | Health score cards for all audited repos            |
+| `/audits`           | How to audit | Instructions for running each agent                 |
+| `/results/:auditId` | Results      | Findings table with severity filters + bar chart    |
+| `/contributors`     | Contributors | Commit timeline (Recharts area chart) + leaderboard |
 
 ---
 
@@ -428,18 +430,35 @@ Copy `.env.example` to `.env` and fill in values. Never commit `.env`.
 
 Only the key for your chosen AI tool is required. You do not need keys for tools you are not using.
 
-| Variable | Required for | Description |
-|----------|-------------|-------------|
-| `GITHUB_REPOS` | All | Comma-separated `owner/repo` list |
-| `GITHUB_TOKEN` | All | PAT with `repo` read scope (contributor stats) |
-| `ANTHROPIC_API_KEY` | Claude only | [console.anthropic.com](https://console.anthropic.com) |
-| `OPENAI_API_KEY` | Codex only | [platform.openai.com](https://platform.openai.com) |
-| `WORKSPACE_DIR` | No | Where repos are cloned (default: `./workspace`) |
-| `REPORTS_DIR` | No | Where reports are written (default: `./reports`) |
-| `API_PORT` | No | API server port (default: `4000`) |
-| `LOG_LEVEL` | No | `debug` \| `info` \| `warn` \| `error` (default: `info`) |
+| Variable            | Required for           | Description                                                            |
+| ------------------- | ---------------------- | ---------------------------------------------------------------------- |
+| `GITHUB_REPOS`      | All                    | Comma-separated `owner/repo` list                                      |
+| `GITHUB_TOKEN`      | Contributor stats only | PAT with `repo` read scope. **Not used for cloning** — see note below. |
+| `ANTHROPIC_API_KEY` | Claude only            | [console.anthropic.com](https://console.anthropic.com)                 |
+| `OPENAI_API_KEY`    | Codex only             | [platform.openai.com](https://platform.openai.com)                     |
+| `WORKSPACE_DIR`     | No                     | Where repos are cloned (default: `./workspace`)                        |
+| `REPORTS_DIR`       | No                     | Where reports are written (default: `./reports`)                       |
+| `API_PORT`          | No                     | API server port (default: `4000`)                                      |
+| `LOG_LEVEL`         | No                     | `debug` \| `info` \| `warn` \| `error` (default: `info`)               |
 
 **GitHub Copilot** requires no API key — it runs via GitHub Actions using your repository's built-in `GITHUB_TOKEN` and your Copilot subscription.
+
+> **Note on `GITHUB_TOKEN` and SSO-protected organisations**
+>
+> Classic PATs (`ghp_...`) are blocked by default on organisations that enforce SAML SSO. If you see:
+>
+> ```
+> Personal access tokens (classic) are forbidden from accessing this repository
+> ```
+>
+> Do not use `GITHUB_TOKEN` for cloning. Instead authenticate with the `gh` CLI:
+>
+> ```bash
+> gh auth login   # one-time setup, uses OAuth — works with SSO orgs
+> gh repo clone owner/repo workspace/owner_repo
+> ```
+>
+> The agents use `gh repo clone` for exactly this reason. `GITHUB_TOKEN` in `.env` is only used for the GitHub REST API (contributor stats via `gh api`), not for `git clone`.
 
 ---
 
@@ -471,6 +490,7 @@ The `.semgrep/ai-code-security.yml` rules are applied automatically during every
 ## Troubleshooting
 
 **`claude` CLI not found**
+
 ```bash
 npm install -g @anthropic-ai/claude-code
 ```
@@ -478,6 +498,18 @@ npm install -g @anthropic-ai/claude-code
 **Audit writes no output to `reports/`**
 
 Check that `ANTHROPIC_API_KEY` is set in `.env` and that the `workspace/` directory is writable.
+
+**`git clone` fails with "Personal access tokens (classic) are forbidden"**
+
+The target repo's organisation enforces SAML SSO. Classic PATs cannot access it.
+Authenticate with the `gh` CLI instead:
+
+```bash
+gh auth login
+gh repo clone owner/repo workspace/owner_repo
+```
+
+Agents already prefer `gh repo clone` over `git clone` for this reason.
 
 **Frontend shows no data**
 

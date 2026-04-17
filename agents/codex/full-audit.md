@@ -9,6 +9,7 @@ codex "Run a full repository audit following agents/codex/full-audit.md on the r
 ```
 
 Or with the task file:
+
 ```bash
 codex --task agents/codex/full-audit.md -- owner/repo
 ```
@@ -17,18 +18,23 @@ codex --task agents/codex/full-audit.md -- owner/repo
 
 You are an expert code auditor with access to the filesystem and shell.
 
-1. Read `.env` to get `GITHUB_REPOS`, `GITHUB_TOKEN`.
-2. The target repo is provided as the first argument, or use the first entry from `GITHUB_REPOS`.
-3. Clone or pull the repo to `workspace/{owner}_{repo}/`
-4. Run these audit checks using shell commands and file reading:
+1. Read `.env` to get `GITHUB_REPOS`. The target repo is provided as the first argument, or use the first entry from `GITHUB_REPOS`.
+2. Clone the repo using the `gh` CLI (do **not** use `GITHUB_TOKEN` for cloning — classic PATs are blocked by SSO-protected organisations):
+   ```bash
+   gh repo clone owner/repo workspace/owner_repo -- --depth=50 --quiet
+   ```
+   Requires `gh auth login` to have been run once.
+3. Run these audit checks using shell commands and file reading:
 
 ### Security Checks
+
 - Run `npm audit --json` if `package.json` exists
 - Run `gitleaks detect --source workspace/{slug} --report-format json --no-git --exit-code 0`
 - Run `semgrep --config .semgrep/ai-code-security.yml --json workspace/{slug}`
 - Read source files and identify: hardcoded secrets, SQL injection, command injection, insecure randomness, JWT issues, XSS, path traversal
 
 ### Quality Checks
+
 - Run `npx eslint --format json --ext .ts,.tsx,.js,.jsx .` in the workspace
 - Scan for `console.log` in non-test files
 - Run `npx depcheck --json`
@@ -36,17 +42,21 @@ You are an expert code auditor with access to the filesystem and shell.
 - Check TypeScript files for `: any` usage
 
 ### API Checks
+
 Follow the rules in `docs/context/03-api-standards.md`:
+
 - Check for OpenAPI spec file
 - Check route versioning (`/api/v{n}/`)
 - Check JWT verify calls for algorithm specification
 - Check for CORS wildcard, missing rate limiting, missing helmet
 
 ### DB Migration Checks
+
 Follow `docs/context/04-db-migrations.md`:
+
 - Check `db/migrations/` or `migrations/` for Flyway naming conventions
 - Check for duplicate version numbers
-- Check for SELECT *, missing transactions, parameterized queries
+- Check for SELECT \*, missing transactions, parameterized queries
 
 5. Write all results to `reports/{slug}/{uuid}/` as:
    - `results.json` — structured findings following `scripts/report-schema.json`
@@ -54,6 +64,7 @@ Follow `docs/context/04-db-migrations.md`:
    - `report.html` — HTML report with color-coded severity
 
 6. Delete the cloned repository from the workspace:
+
    ```bash
    rm -rf "workspace/$SLUG"
    ```
@@ -61,6 +72,7 @@ Follow `docs/context/04-db-migrations.md`:
 7. Print a summary of findings to stdout.
 
 ## Reference files
+
 - `docs/context/01-security.md` — security audit rules
 - `docs/context/02-code-quality.md` — quality standards
 - `docs/context/03-api-standards.md` — API standards
