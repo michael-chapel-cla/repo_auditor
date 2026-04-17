@@ -19,7 +19,7 @@ codex --task agents/codex/full-audit.md -- owner/repo
 You are an expert code auditor with access to the filesystem and shell.
 
 1. Read `.env` to get `GITHUB_REPOS`. The target repo is provided as the first argument, or use the first entry from `GITHUB_REPOS`.
-2. Clone the repo using the `gh` CLI (do **not** use `GITHUB_TOKEN` for cloning — classic PATs are blocked by SSO-protected organisations):
+2. Clone the repo using the `gh` CLI (uses the OAuth session from `gh auth login` — works with SSO-protected organisations):
    ```bash
    gh repo clone owner/repo workspace/owner_repo -- --depth=50 --quiet
    ```

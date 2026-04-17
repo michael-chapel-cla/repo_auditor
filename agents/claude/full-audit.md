@@ -14,7 +14,7 @@ You are an expert code auditor. Your job is to run a comprehensive audit of a Gi
 Read `.env` to get `GITHUB_REPOS`, `WORKSPACE_DIR`, and `REPORTS_DIR`.
 If `$ARGUMENTS` is set, use it as the repo. Otherwise use the first entry in `GITHUB_REPOS`.
 
-> `GITHUB_TOKEN` is **not used for cloning**. Classic PATs (`ghp_...`) are blocked by organisations that enforce SAML SSO. Cloning uses the `gh` CLI OAuth session instead.
+> All cloning and GitHub API calls use the `gh` CLI OAuth session. No personal access token is required.
 
 Set:
 
@@ -45,22 +45,26 @@ Prerequisite: `gh auth login` must have been run once. The `gh` CLI OAuth token 
 Invoke each sub-audit in sequence, passing `$WORKSPACE` and `$OUT_DIR`. Read the relevant context doc before each audit:
 
 1. **Security Audit** — read `docs/context/01-security.md`, then follow `agents/claude/security-audit.md`
+   - Outputs: `security-results.json`, `npm-results.json`, `npm-audit.json`
 2. **Quality Audit** — read `docs/context/02-code-quality.md`, then follow `agents/claude/quality-audit.md`
 3. **API Audit** — read `docs/context/03-api-standards.md`, then follow `agents/claude/api-audit.md`
 4. **DB Audit** — read `docs/context/04-db-migrations.md`, then follow `agents/claude/db-audit.md`
 5. **Contributors** — follow `agents/claude/contributors.md`
+
+> **Private registry**: if `$WORKSPACE/.npmrc` references `${NPM_TOKEN}`, export the token before running the security audit: `export NPM_TOKEN="$NPM_TOKEN"`. If unset, the npm audit step will record a skipped finding and continue.
 
 ### Step 4 — Aggregate results
 
 After all sub-agents complete, read each category's output JSON from `$OUT_DIR/`:
 
 - `security-results.json`
+- `npm-results.json` (npm dependency vulnerabilities — separate `npm` category)
 - `quality-results.json`
 - `api-results.json`
 - `db-results.json`
 - `contributors.json`
 
-Merge into a single `results.json` matching the schema in `scripts/report-schema.json`.
+Merge into a single `results.json` matching the schema in `scripts/report-schema.json`. The `npm` category appears as its own entry in `results[]` alongside security/quality/api/db.
 
 Calculate `summary`:
 

@@ -58,7 +58,11 @@ Edit `.env` — only fill in the key for the AI tool you plan to use:
 GITHUB_REPOS=myorg/my-api,myorg/my-frontend
 
 # GitHub token — needs repo read scope for contributor stats
-GITHUB_TOKEN=ghp_your_token_here
+
+# npm token — only required if the target repo uses a private npm registry
+# (e.g. Azure Artifacts / Azure DevOps Artifacts). Used by `npm audit` and
+# the S14 package safety check. Leave blank or omit for public registries.
+NPM_TOKEN=your_npm_token_here
 
 # --- Set ONE of the following depending on which AI tool you use ---
 
@@ -430,35 +434,26 @@ Copy `.env.example` to `.env` and fill in values. Never commit `.env`.
 
 Only the key for your chosen AI tool is required. You do not need keys for tools you are not using.
 
-| Variable            | Required for           | Description                                                            |
-| ------------------- | ---------------------- | ---------------------------------------------------------------------- |
-| `GITHUB_REPOS`      | All                    | Comma-separated `owner/repo` list                                      |
-| `GITHUB_TOKEN`      | Contributor stats only | PAT with `repo` read scope. **Not used for cloning** — see note below. |
-| `ANTHROPIC_API_KEY` | Claude only            | [console.anthropic.com](https://console.anthropic.com)                 |
-| `OPENAI_API_KEY`    | Codex only             | [platform.openai.com](https://platform.openai.com)                     |
-| `WORKSPACE_DIR`     | No                     | Where repos are cloned (default: `./workspace`)                        |
-| `REPORTS_DIR`       | No                     | Where reports are written (default: `./reports`)                       |
-| `API_PORT`          | No                     | API server port (default: `4000`)                                      |
-| `LOG_LEVEL`         | No                     | `debug` \| `info` \| `warn` \| `error` (default: `info`)               |
+| Variable            | Required for | Description                                              |
+| ------------------- | ------------ | -------------------------------------------------------- |
+| `GITHUB_REPOS`      | All          | Comma-separated `owner/repo` list                        |
+| `ANTHROPIC_API_KEY` | Claude only  | [console.anthropic.com](https://console.anthropic.com)   |
+| `OPENAI_API_KEY`    | Codex only   | [platform.openai.com](https://platform.openai.com)       |
+| `WORKSPACE_DIR`     | No           | Where repos are cloned (default: `./workspace`)          |
+| `REPORTS_DIR`       | No           | Where reports are written (default: `./reports`)         |
+| `API_PORT`          | No           | API server port (default: `4000`)                        |
+| `LOG_LEVEL`         | No           | `debug` \| `info` \| `warn` \| `error` (default: `info`) |
 
-**GitHub Copilot** requires no API key — it runs via GitHub Actions using your repository's built-in `GITHUB_TOKEN` and your Copilot subscription.
+**GitHub Copilot** requires no API key — it runs via GitHub Actions using the built-in Actions token and your Copilot subscription.
 
-> **Note on `GITHUB_TOKEN` and SSO-protected organisations**
+> **Authenticating with the `gh` CLI (required for SSO-protected organisations)**
 >
-> Classic PATs (`ghp_...`) are blocked by default on organisations that enforce SAML SSO. If you see:
->
-> ```
-> Personal access tokens (classic) are forbidden from accessing this repository
-> ```
->
-> Do not use `GITHUB_TOKEN` for cloning. Instead authenticate with the `gh` CLI:
+> Classic PATs (`ghp_...`) are blocked by default on organisations that enforce SAML SSO. All agents use the `gh` CLI OAuth session for both cloning and API calls — no personal access token is needed:
 >
 > ```bash
 > gh auth login   # one-time setup, uses OAuth — works with SSO orgs
 > gh repo clone owner/repo workspace/owner_repo
 > ```
->
-> The agents use `gh repo clone` for exactly this reason. `GITHUB_TOKEN` in `.env` is only used for the GitHub REST API (contributor stats via `gh api`), not for `git clone`.
 
 ---
 

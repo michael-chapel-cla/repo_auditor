@@ -89,9 +89,81 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // GET /api/contributors — latest contributor stats per repo
+    // GET /api/contributors/runs — list all runs that have contributor data
+    if (pathname === "/api/contributors/runs") {
+      const repoDirs = await readdir(REPORTS_DIR).catch(() => [] as string[]);
+      const runs: unknown[] = [];
+      for (const repoDir of repoDirs) {
+        if (repoDir === ".gitkeep") continue;
+        const auditDirs = await readdir(path.join(REPORTS_DIR, repoDir)).catch(
+          () => [] as string[],
+        );
+        for (const auditId of auditDirs) {
+          const contributorsPath = path.join(
+            REPORTS_DIR,
+            repoDir,
+            auditId,
+            "contributors.json",
+          );
+          const resultsPath = path.join(
+            REPORTS_DIR,
+            repoDir,
+            auditId,
+            "results.json",
+          );
+          const contribStat = await stat(contributorsPath).catch(() => null);
+          let hasData = false;
+          let hasFullStats = false;
+          let repoFullName: string | undefined;
+          let startedAt: string | undefined;
+          let agentTool: string | undefined;
+          try {
+            if (contribStat) {
+              const raw = await readFile(contributorsPath, "utf8");
+              const d = JSON.parse(raw) as {
+                repoFullName?: string;
+                contributors?: { additions?: number }[];
+              };
+              repoFullName = d.repoFullName;
+              hasData = (d.contributors?.length ?? 0) > 0;
+              hasFullStats = (d.contributors?.[0]?.additions ?? null) !== null;
+            }
+            const resStat = await stat(resultsPath).catch(() => null);
+            if (resStat) {
+              const raw = await readFile(resultsPath, "utf8");
+              const d = JSON.parse(raw) as {
+                repoFullName?: string;
+                startedAt?: string;
+                agentTool?: string;
+                contributors?: unknown[];
+              };
+              repoFullName = repoFullName ?? d.repoFullName;
+              startedAt = d.startedAt;
+              agentTool = d.agentTool;
+              if (!hasData && (d.contributors?.length ?? 0) > 0) hasData = true;
+            }
+          } catch {
+            /* skip */
+          }
+          if (hasData)
+            runs.push({
+              auditId,
+              repoFullName,
+              startedAt,
+              agentTool,
+              hasFullStats,
+            });
+        }
+      }
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ runs }));
+      return;
+    }
+
+    // GET /api/contributors — contributor stats, filtered by auditId or repo
     if (pathname === "/api/contributors") {
       const repoParam = url.searchParams.get("repo");
+      const auditIdParam = url.searchParams.get("auditId");
       const repoDirs = await readdir(REPORTS_DIR).catch(() => [] as string[]);
       const out: unknown[] = [];
       for (const repoDir of repoDirs) {
@@ -101,7 +173,11 @@ const server = createServer(async (req, res) => {
           () => [] as string[],
         );
         auditDirs.sort((a, b) => b.localeCompare(a));
-        for (const auditId of auditDirs) {
+        // If auditId specified, only look at that one dir; otherwise take latest
+        const dirsToCheck = auditIdParam
+          ? auditDirs.filter((d) => d === auditIdParam)
+          : auditDirs;
+        for (const auditId of dirsToCheck) {
           // Agents write contributors to a dedicated contributors.json file
           const contributorsPath = path.join(
             REPORTS_DIR,
@@ -142,7 +218,10 @@ const server = createServer(async (req, res) => {
             }
 
             if (contributors?.length) {
-              out.push({ repoFullName, contributors });
+              const hasFullStats =
+                (contributors as { additions?: number }[])[0]?.additions !=
+                null;
+              out.push({ repoFullName, contributors, hasFullStats });
               break;
             }
           } catch {
@@ -152,6 +231,41 @@ const server = createServer(async (req, res) => {
       }
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ results: out }));
+      return;
+    }
+
+    // GET /api/reports/:auditId/npm-audit — raw npm audit JSON
+    const npmAuditMatch = pathname.match(
+      /^\/api\/reports\/([^/]+)\/npm-audit$/,
+    );
+    if (npmAuditMatch) {
+      const auditId = npmAuditMatch[1]!;
+      const repoDirs = await readdir(REPORTS_DIR).catch(() => [] as string[]);
+      for (const repoDir of repoDirs) {
+        const filePath = path.join(
+          REPORTS_DIR,
+          repoDir,
+          auditId,
+          "npm-audit.json",
+        );
+        try {
+          const raw = await readFile(filePath, "utf8");
+          res.writeHead(200, { "Content-Type": "application/json" });
+          res.end(raw);
+          return;
+        } catch {
+          /* try next */
+        }
+      }
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: {
+            code: "NOT_FOUND",
+            message: `npm-audit not found for audit: ${auditId}`,
+          },
+        }),
+      );
       return;
     }
 
@@ -212,6 +326,19 @@ const server = createServer(async (req, res) => {
       }
       res.writeHead(404);
       res.end("Not found");
+      return;
+    }
+
+    // GET /api/readme — serve the Copilot quickstart doc
+    if (pathname === "/api/readme") {
+      const readmePath = path.join(
+        PROJECT_ROOT,
+        "docs",
+        "COPILOT-QUICKSTART.md",
+      );
+      const content = await readFile(readmePath, "utf8");
+      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
+      res.end(content);
       return;
     }
 

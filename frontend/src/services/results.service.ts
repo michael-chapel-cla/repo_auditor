@@ -50,12 +50,16 @@ export interface AuditListItem {
 
 export const resultsService = {
   async list(): Promise<AuditListItem[]> {
-    const { data } = await axios.get<{ results: AuditListItem[] }>("/api/reports");
+    const { data } = await axios.get<{ results: AuditListItem[] }>(
+      "/api/reports",
+    );
     return data.results;
   },
 
   async get(auditId: string): Promise<RepoAuditResult> {
-    const { data } = await axios.get<RepoAuditResult>(`/api/reports/${auditId}`);
+    const { data } = await axios.get<RepoAuditResult>(
+      `/api/reports/${auditId}`,
+    );
     return data;
   },
 };

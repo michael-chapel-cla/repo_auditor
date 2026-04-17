@@ -14,18 +14,18 @@ import {
   IconButton,
 } from "@mui/material";
 import DashboardIcon from "@mui/icons-material/Dashboard";
-import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import AssessmentIcon from "@mui/icons-material/Assessment";
 import GroupIcon from "@mui/icons-material/Group";
 import MenuIcon from "@mui/icons-material/Menu";
+import ArticleIcon from "@mui/icons-material/Article";
 
 const DRAWER_WIDTH = 220;
 
 const NAV_ITEMS = [
   { label: "Dashboard", icon: <DashboardIcon />, path: "/dashboard" },
-  { label: "Run Audit", icon: <PlayArrowIcon />, path: "/audits" },
   { label: "Results", icon: <AssessmentIcon />, path: "/results" },
   { label: "Contributors", icon: <GroupIcon />, path: "/contributors" },
+  { label: "Quickstart", icon: <ArticleIcon />, path: "/readme" },
 ];
 
 interface LayoutProps {
@@ -40,7 +40,7 @@ export default function Layout({ children }: LayoutProps) {
   const drawer = (
     <Box>
       <Toolbar>
-        <Typography variant="h6" fontWeight="bold" color="primary">
+        <Typography variant="h6" fontWeight="bold" color="text.primary">
           RepoAuditor
         </Typography>
       </Toolbar>

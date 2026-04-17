@@ -3,21 +3,41 @@
   "title": "RepoAuditResult",
   "description": "Output schema all audit agents must produce",
   "type": "object",
-  "required": ["auditId", "repoFullName", "status", "startedAt", "summary", "results"],
+  "required": [
+    "auditId",
+    "repoFullName",
+    "status",
+    "startedAt",
+    "summary",
+    "results"
+  ],
   "properties": {
     "auditId": { "type": "string", "format": "uuid" },
     "repoFullName": { "type": "string", "example": "owner/repo" },
     "status": { "type": "string", "enum": ["running", "complete", "error"] },
     "startedAt": { "type": "string", "format": "date-time" },
     "completedAt": { "type": "string", "format": "date-time" },
-    "agentTool": { "type": "string", "enum": ["claude", "codex", "copilot"], "description": "Which AI tool ran this audit" },
+    "agentTool": {
+      "type": "string",
+      "enum": ["claude", "codex", "copilot"],
+      "description": "Which AI tool ran this audit"
+    },
     "summary": {
       "type": "object",
-      "required": ["overallScore", "totalFindings", "bySeverity", "byCategory", "riskLevel"],
+      "required": [
+        "overallScore",
+        "totalFindings",
+        "bySeverity",
+        "byCategory",
+        "riskLevel"
+      ],
       "properties": {
         "overallScore": { "type": "integer", "minimum": 0, "maximum": 100 },
         "totalFindings": { "type": "integer", "minimum": 0 },
-        "riskLevel": { "type": "string", "enum": ["critical", "high", "medium", "low", "clean"] },
+        "riskLevel": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low", "clean"]
+        },
         "bySeverity": {
           "type": "object",
           "properties": {
@@ -45,7 +65,10 @@
         "type": "object",
         "required": ["category", "status", "score", "findings"],
         "properties": {
-          "category": { "type": "string", "enum": ["security", "quality", "api", "db"] },
+          "category": {
+            "type": "string",
+            "enum": ["security", "quality", "api", "db", "npm"]
+          },
           "status": { "type": "string", "enum": ["passed", "failed", "error"] },
           "score": { "type": "integer", "minimum": 0, "maximum": 100 },
           "durationMs": { "type": "integer" },
@@ -54,11 +77,24 @@
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "category", "severity", "title", "description", "source"],
+              "required": [
+                "id",
+                "category",
+                "severity",
+                "title",
+                "description",
+                "source"
+              ],
               "properties": {
                 "id": { "type": "string" },
-                "category": { "type": "string", "enum": ["security", "quality", "api", "db"] },
-                "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "info"] },
+                "category": {
+                  "type": "string",
+                  "enum": ["security", "quality", "api", "db", "npm"]
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": ["critical", "high", "medium", "low", "info"]
+                },
                 "title": { "type": "string" },
                 "description": { "type": "string" },
                 "file": { "type": "string" },
@@ -68,7 +104,17 @@
                 "fix": { "type": "string" },
                 "source": {
                   "type": "string",
-                  "enum": ["npm-audit", "gitleaks", "semgrep", "ai", "eslint", "static", "depcheck", "tsc", "git"]
+                  "enum": [
+                    "npm-audit",
+                    "gitleaks",
+                    "semgrep",
+                    "ai",
+                    "eslint",
+                    "static",
+                    "depcheck",
+                    "tsc",
+                    "git"
+                  ]
                 }
               }
             }

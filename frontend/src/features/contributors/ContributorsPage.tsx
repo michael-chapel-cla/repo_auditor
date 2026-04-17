@@ -15,6 +15,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Chip,
 } from "@mui/material";
 import {
   AreaChart,
@@ -25,29 +26,50 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { contributorsService } from "../../services/contributors.service.ts";
-import { useResultsList } from "../../hooks/useResults.ts";
-import type { ContributorStats } from "../../services/contributors.service.ts";
+import type {
+  ContributorStats,
+  ContributorRun,
+} from "../../services/contributors.service.ts";
 
 export default function ContributorsPage() {
-  const { results } = useResultsList();
-  const repos = [...new Set(results.map((r) => r.repoFullName))];
-  const [selectedRepo, setSelectedRepo] = useState<string>(repos[0] ?? "");
+  const [runs, setRuns] = useState<ContributorRun[]>([]);
+  const [selectedAuditId, setSelectedAuditId] = useState<string>("");
   const [contributors, setContributors] = useState<ContributorStats[]>([]);
+  const [hasFullStats, setHasFullStats] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load run list once, default to the run with the most complete stats
   useEffect(() => {
-    if (!selectedRepo) return;
+    contributorsService.getRuns().then((r) => {
+      // Sort: full-stats runs first, then newest-first
+      const sorted = [...r].sort((a, b) => {
+        if (a.hasFullStats !== b.hasFullStats) return a.hasFullStats ? -1 : 1;
+        return (
+          new Date(b.startedAt ?? 0).getTime() -
+          new Date(a.startedAt ?? 0).getTime()
+        );
+      });
+      setRuns(sorted);
+      setSelectedAuditId(sorted[0]?.auditId ?? "");
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAuditId) return;
     setLoading(true);
     setError(null);
     contributorsService
-      .get(selectedRepo)
-      .then((data) => setContributors(data.contributors ?? []))
+      .get(selectedAuditId)
+      .then((data) => {
+        setContributors(data.contributors ?? []);
+        setHasFullStats(data.hasFullStats);
+      })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [selectedRepo]);
+  }, [selectedAuditId]);
 
-  // Prepare commit history chart data (last 30 contributors sorted by commits)
+  // Chart: top 10 by commits
   const chartData = contributors.slice(0, 10).map((c) => ({
     name: c.name.split(" ")[0] ?? c.email,
     commits: c.commits,
@@ -61,20 +83,52 @@ export default function ContributorsPage() {
         Contributors
       </Typography>
 
-      <FormControl sx={{ minWidth: 300, mb: 3 }}>
-        <InputLabel>Repository</InputLabel>
+      <FormControl sx={{ minWidth: 400, mb: 2 }}>
+        <InputLabel>Audit run</InputLabel>
         <Select
-          value={selectedRepo}
-          label="Repository"
-          onChange={(e) => setSelectedRepo(e.target.value)}
+          value={selectedAuditId}
+          label="Audit run"
+          onChange={(e) => setSelectedAuditId(e.target.value)}
         >
-          {repos.map((r) => (
-            <MenuItem key={r} value={r}>
-              {r}
+          {runs.map((r) => (
+            <MenuItem key={r.auditId} value={r.auditId}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <span>
+                  {r.repoFullName}
+                  {r.startedAt
+                    ? ` — ${new Date(r.startedAt).toLocaleString()}`
+                    : ""}
+                  {r.agentTool ? ` · ${r.agentTool}` : ""}
+                  &nbsp;
+                  <span style={{ color: "#9e9e9e", fontSize: "0.7rem" }}>
+                    ({r.auditId.slice(0, 8)})
+                  </span>
+                </span>
+                {r.hasFullStats && (
+                  <Chip
+                    label="full stats"
+                    size="small"
+                    sx={{
+                      fontSize: "0.6rem",
+                      height: 16,
+                      backgroundColor: "#2e7d32",
+                      color: "#fff",
+                    }}
+                  />
+                )}
+              </Box>
             </MenuItem>
           ))}
         </Select>
       </FormControl>
+
+      {!hasFullStats && contributors.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          This run only captured commit counts — additions and deletions were
+          not recorded by the agent. Select a run marked{" "}
+          <strong>full stats</strong> to see complete data.
+        </Alert>
+      )}
 
       {loading && <CircularProgress />}
       {error && <Alert severity="error">{error}</Alert>}
@@ -93,8 +147,8 @@ export default function ContributorsPage() {
                 <Area
                   type="monotone"
                   dataKey="commits"
-                  stroke="#1a237e"
-                  fill="#e8eaf6"
+                  stroke="#1565c0"
+                  fill="#e3f2fd"
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -106,19 +160,34 @@ export default function ContributorsPage() {
           <TableContainer component={Paper}>
             <Table size="small">
               <TableHead>
-                <TableRow sx={{ backgroundColor: "#1a237e" }}>
-                  <TableCell sx={{ color: "white" }}>#</TableCell>
-                  <TableCell sx={{ color: "white" }}>Contributor</TableCell>
-                  <TableCell sx={{ color: "white" }} align="right">
+                <TableRow sx={{ backgroundColor: "#212121" }}>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                    #
+                  </TableCell>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                    Contributor
+                  </TableCell>
+                  <TableCell
+                    sx={{ color: "#fff", fontWeight: "bold" }}
+                    align="right"
+                  >
                     Commits
                   </TableCell>
-                  <TableCell sx={{ color: "white" }} align="right">
+                  <TableCell
+                    sx={{ color: "#fff", fontWeight: "bold" }}
+                    align="right"
+                  >
                     Additions
                   </TableCell>
-                  <TableCell sx={{ color: "white" }} align="right">
+                  <TableCell
+                    sx={{ color: "#fff", fontWeight: "bold" }}
+                    align="right"
+                  >
                     Deletions
                   </TableCell>
-                  <TableCell sx={{ color: "white" }}>Last Commit</TableCell>
+                  <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
+                    Last Commit
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -136,11 +205,21 @@ export default function ContributorsPage() {
                       </Box>
                     </TableCell>
                     <TableCell align="right">{c.commits}</TableCell>
-                    <TableCell align="right" sx={{ color: "#388e3c" }}>
-                      {c.additions != null ? `+${c.additions}` : "—"}
+                    <TableCell
+                      align="right"
+                      sx={{ color: "#2e7d32", fontWeight: "bold" }}
+                    >
+                      {c.additions != null
+                        ? `+${c.additions.toLocaleString()}`
+                        : "—"}
                     </TableCell>
-                    <TableCell align="right" sx={{ color: "#d32f2f" }}>
-                      {c.deletions != null ? `-${c.deletions}` : "—"}
+                    <TableCell
+                      align="right"
+                      sx={{ color: "#c62828", fontWeight: "bold" }}
+                    >
+                      {c.deletions != null
+                        ? `-${c.deletions.toLocaleString()}`
+                        : "—"}
                     </TableCell>
                     <TableCell>
                       {c.lastCommitAt

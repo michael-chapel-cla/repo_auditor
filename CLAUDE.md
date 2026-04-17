@@ -7,7 +7,7 @@ A multi-AI-compatible repository auditing platform. Audits are run entirely by A
 of the reports those agents produce.
 
 **Audit logic lives in**: `agents/` directory (instruction files) + `.claude/commands/` (slash commands)
-**Output destination**: `reports/{owner}_{repo}/{auditId}/` (results.json, report.md, report.html)
+**Output destination**: `reports/{owner}_{repo}/{auditId}/` (results.json, npm-audit.json, report.md, report.html)
 **Frontend**: reads static report files via a tiny Node http server (`api/`)
 
 ## Architecture
@@ -45,6 +45,20 @@ docs/context/         LLM-optimized rule sets agents load before each audit
   04-db-migrations.md 13 DB migration safety rules
 ```
 
+## Result categories
+
+`results.json` contains one entry per category in `results[]`:
+
+| Category   | Source                       | Notes                                                    |
+| ---------- | ---------------------------- | -------------------------------------------------------- |
+| `security` | AI scan + gitleaks + semgrep | Static/AI findings — no npm vulns                        |
+| `npm`      | `npm audit --json`           | Dep vulnerabilities; raw output also in `npm-audit.json` |
+| `quality`  | ESLint, tsc, depcheck        | Code quality                                             |
+| `api`      | OpenAPI, auth, CORS checks   | API compliance                                           |
+| `db`       | Migration file analysis      | DB safety                                                |
+
+**Private registry**: if the target repo's `.npmrc` uses `${NPM_TOKEN}`, set `NPM_TOKEN` in `.env` before running. Without it, npm audit is skipped with an `info` finding.
+
 ## How to run an audit
 
 ```bash
@@ -74,13 +88,13 @@ npm run dev:frontend      # start Vite dev server on :5173
 
 ## Slash Commands (Claude Code)
 
-| Command | Description |
-|---|---|
-| `/full-audit owner/repo` | Full audit: security + quality + API + DB + contributors |
-| `/security-audit owner/repo` | Security only (npm audit, gitleaks, semgrep, AI scan) |
-| `/quality-audit owner/repo` | Quality only (ESLint, coverage, console.log, any-type, DRY/SOLID) |
-| `/api-audit owner/repo` | API compliance only |
-| `/db-audit owner/repo` | DB migration safety only |
+| Command                      | Description                                                       |
+| ---------------------------- | ----------------------------------------------------------------- |
+| `/full-audit owner/repo`     | Full audit: security + quality + API + DB + contributors          |
+| `/security-audit owner/repo` | Security only (npm audit, gitleaks, semgrep, AI scan)             |
+| `/quality-audit owner/repo`  | Quality only (ESLint, coverage, console.log, any-type, DRY/SOLID) |
+| `/api-audit owner/repo`      | API compliance only                                               |
+| `/db-audit owner/repo`       | DB migration safety only                                          |
 
 ## Security Rules (HARD — never violate)
 
@@ -106,6 +120,7 @@ npm run dev:frontend      # start Vite dev server on :5173
 ## Output Schema
 
 All agents MUST write output matching `scripts/report-schema.json`. Key fields:
+
 - `auditId` (UUID), `repoFullName`, `status`, `startedAt`, `agentTool`
 - `summary.overallScore` (0-100), `summary.riskLevel`, `summary.bySeverity`, `summary.byCategory`
 - `results[]` — one per category with `score`, `status`, `findings[]`

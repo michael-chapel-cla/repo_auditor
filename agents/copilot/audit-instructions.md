@@ -19,7 +19,7 @@ You are an expert code auditor. When asked to audit a repository:
    - `docs/context/03-api-standards.md` — API compliance rules
    - `docs/context/04-db-migrations.md` — DB migration safety (load only if `db/migrations/` exists)
 
-2. **Clone the repository** using the `gh` CLI. Do **not** use `git clone` with `GITHUB_TOKEN` — classic PATs are blocked by organisations that enforce SAML SSO.
+2. **Clone the repository** using the `gh` CLI. Use the OAuth session from `gh auth login` — this works with SSO-protected organisations.
 
    ```bash
    gh repo clone owner/repo workspace/owner_repo -- --depth=50
@@ -28,11 +28,31 @@ You are an expert code auditor. When asked to audit a repository:
    Requires the `gh` CLI to be authenticated (`gh auth login`). The OAuth token issued by `gh auth login` has the necessary `repo` scope and works with SSO-protected organisations.
 
 3. **Run audit checks** using available shell tools:
-   - `npm audit --json` for dependency vulnerabilities
+   - `npm audit --json` for dependency vulnerabilities — see private registry note below
    - `semgrep --config .semgrep/ai-code-security.yml` for code patterns
    - Read files directly for AI-powered analysis
    - `npx eslint --format json` for code quality
    - `npx depcheck --json` for unused dependencies
+
+   **Private npm registry**: if the repo's `.npmrc` references `${NPM_TOKEN}`, the token must be set in the environment before running `npm audit`. Check `.env` for `NPM_TOKEN`. If missing, npm audit will return HTTP 401 and produce no findings — record a single `info` finding `"npm audit skipped — NPM_TOKEN not set"` and continue.
+
+   ```bash
+   export NPM_TOKEN="$NPM_TOKEN"
+   cd "$WORKSPACE" && npm audit --json > "$OUT_DIR/npm-audit.json" 2>/dev/null || true
+   ```
+
+   Convert npm vulnerabilities to the standard finding schema:
+   - `category`: **`"npm"`** — write these as a **separate result category**, not merged into `security`
+   - `severity`: critical→critical, high→high, moderate→medium, low→low
+   - `title`: `"npm: {packageName} — {advisory title}"`
+   - `rule`: `"S14"`, `source`: `"npm-audit"`
+   - `fix`: `"npm install {name}@{fixVersion}"` from `fixAvailable`, or `"npm audit fix"`, or `"No automated fix available"`
+
+   **Azure OpenAI key scanning**: when reading source files, also scan `helm/values-*.yaml` and `.github/workflows/*.yml` for hardcoded Azure OpenAI API keys. Azure keys do NOT start with `sk-` — they use a different format (`[A-Za-z0-9]{40,}J99[A-Z0-9]{4,}`). Flag any literal key value at `DOCAI_AZURE_OPENAI_API_KEY` or similar as `severity: critical`, `rule: S03`.
+
+   **Azure OpenAI prompt injection** (S01): this repo uses `AzureOpenAI` from the `openai` npm package. System prompts use `{ role: 'system', content: ... }` inside the `messages` array of `chat.completions.create()` — not a top-level `system:` field. Flag any system role message whose `content` is interpolated from a variable.
+
+   **Azure OpenAI unvalidated output** (S02): flag any `JSON.parse(response.choices[0].message.content)` without immediate Zod schema validation.
 
 4. **Collect contributor statistics** from the cloned workspace:
 
@@ -50,7 +70,7 @@ You are an expert code auditor. When asked to audit a repository:
    - `firstCommitAt` / `lastCommitAt` — earliest and most recent ISO date
    - Skip or mark authors whose email matches `*[bot]*` as `isBot: true`
 
-   If `GITHUB_TOKEN` is available, enrich with the GitHub API:
+   Enrich with the GitHub API via the `gh` CLI:
 
    ```bash
    gh api repos/{owner}/{repo}/contributors?per_page=100
@@ -90,7 +110,8 @@ You are an expert code auditor. When asked to audit a repository:
    Sort `contributors` by `commits` descending.
 
 5. **Write output** to `reports/{owner}_{repo}/{run-id}/`:
-   - `results.json` — following schema in `scripts/report-schema.json`
+   - `results.json` — following schema in `scripts/report-schema.json`; include `npm` as a separate category in `results[]`
+   - `npm-audit.json` — raw unmodified output of `npm audit --json` (preserved for UI display)
    - `contributors.json` — contributor stats (see step 4)
    - `report.md` — markdown summary
    - `report.html` — HTML report

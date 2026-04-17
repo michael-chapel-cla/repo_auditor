@@ -49,7 +49,6 @@
   "remoteEnv": {
     "NODE_ENV": "development",
     "ANTHROPIC_API_KEY": "${localEnv:ANTHROPIC_API_KEY}",
-    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}",
-    "GITHUB_TOKEN": "${localEnv:GITHUB_TOKEN}"
+    "OPENAI_API_KEY": "${localEnv:OPENAI_API_KEY}"
   }
 }

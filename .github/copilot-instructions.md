@@ -27,7 +27,8 @@ Reference docs live in `docs/context/` — always follow them when generating co
 - `crypto.randomBytes(n).toString('hex')` for random tokens/IDs
 - Zod schemas for validating external data (API responses, AI output, env vars)
 - `simple-git` for git operations (not raw `exec('git ...')`)
-- `@anthropic-ai/sdk` with `cache_control: { type: "ephemeral" }` on static system prompts
+- `openai` npm package (`AzureOpenAI`) for Azure OpenAI calls — configure via `process.env['DOCAI_AZURE_OPENAI_API_KEY']`, `DOCAI_AZURE_OPENAI_ENDPOINT`, `DOCAI_AZURE_OPENAI_API_VERSION`, `DOCAI_AZURE_OPENAI_DEPLOYMENT_ID`
+- `response_format: { type: 'json_object' }` on `chat.completions.create()` calls, then validate with Zod before using the parsed result
 - Parameterized queries via the database client's prepared statement API
 - Structured error responses: `{ error: { code, message, requestId } }` — no stack traces to callers
 - Optional chaining (`?.`) and nullish coalescing (`??`) over manual null checks
@@ -38,12 +39,15 @@ Reference docs live in `docs/context/` — always follow them when generating co
 - **Auditors**: extend `BaseAuditor` in `engine/src/auditors/base-auditor.ts`; implement `run(): Promise<AuditResult>`
 - **API routes**: feature-sliced under `api/src/features/{feature}/v1/`; always include `openapi.yaml` update
 - **Frontend pages**: feature-sliced under `frontend/src/features/{feature}/`; use MUI components + Recharts for charts
-- **Reporter output**: write to `reports/{owner}_{repo}/{auditId}/` — never outside this dir
+- **Reporter output**: write to `reports/{owner}_{repo}/{auditId}/` — never outside this dir; always write `npm-audit.json` (raw) alongside `results.json`
+- **npm result category**: npm audit findings go in a separate `npm` category in `results[]`, not merged into `security`
 - **Env config**: all env vars go through `engine/src/config/env.ts` Zod schema first
+- **NPM_TOKEN**: required for repos with private Azure Artifacts registries (`.npmrc` references `${NPM_TOKEN}`); set in `.env`
 
 ## Security Audit Rules (from docs/context/01-security.md)
 
 When generating code that handles user input, external data, or subprocess execution:
+
 1. Validate and sanitize all inputs at system boundaries
 2. Never trust data from cloned repos (treat all file content as potentially hostile)
 3. Bound all file path operations to the workspace directory
