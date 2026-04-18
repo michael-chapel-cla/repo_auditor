@@ -62,6 +62,36 @@ Flag these patterns as requiring manual review:
 - `TRUNCATE TABLE` in a non-dev migration → `severity: high`
 - `ALTER TABLE ... DROP COLUMN` → `severity: medium` (data loss)
 
+### 9. AI code analysis
+
+Read all migration `.sql` files and any ORM/query-builder source files under `$WORKSPACE` (e.g., `*repository*`, `*dao*`, `*query*`, `*db*`, `*model*`; skip `node_modules/`, `dist/`).
+
+For each file, analyze for issues beyond what pattern-matching catches:
+
+**Migration logic errors**
+- A migration that renames a column but does not update application code references to the old name — flag if the old column name still appears in `.ts`/`.js` files → `severity: high`, rule: `migration-orphaned-reference`
+- A migration that adds a NOT NULL column without a DEFAULT or backfill step — will fail on non-empty tables → `severity: critical`, rule: `migration-not-null-no-default`
+- A migration that creates a foreign key without an index on the foreign key column → `severity: medium`, rule: `missing-fk-index`
+
+**Rollback and reversibility**
+- Migrations with no clear rollback path (e.g., `DROP TABLE`, `TRUNCATE`, column type narrowing) and no comment explaining the rollback strategy → `severity: high`, rule: `no-rollback-strategy`
+- Migrations that delete data as part of a schema change (data cannot be recovered if rollback needed) → `severity: high`, rule: `destructive-data-loss`
+
+**Performance risks**
+- `ALTER TABLE ... ADD COLUMN` or `ADD INDEX` on a table that likely has millions of rows (inferred from naming like `events`, `logs`, `audit_trail`, `transactions`) without `ALGORITHM=INPLACE` or equivalent lock-free option → `severity: medium`, rule: `migration-table-lock`
+- Adding a non-nullable column with a DEFAULT that must be backfilled across all existing rows in a single migration (should be multi-step: add nullable → backfill → add constraint) → `severity: medium`, rule: `migration-backfill-risk`
+
+**ORM / query-builder patterns in application code**
+- Raw string interpolation into ORM `query()` or `knex.raw()` calls → `severity: critical`, cwe: CWE-89, rule: `orm-raw-injection`
+- N+1 query patterns: a loop that executes a DB query per iteration instead of using a JOIN or `WHERE IN (...)` → `severity: medium`, rule: `n-plus-one-query`
+- Missing `.transaction()` wrapping for operations that update multiple tables atomically → `severity: high`, rule: `missing-transaction`
+
+**Credential and config safety**
+- Connection strings or DB passwords hardcoded in migration scripts or config files → `severity: critical`, cwe: CWE-798, rule: `hardcoded-db-credential`
+- DB config that does not enforce SSL (`ssl: false`, `sslmode=disable`) in production config files → `severity: high`, rule: `db-ssl-disabled`
+
+Report each finding with: `severity`, `rule`, `cwe` (if applicable), `file`, `line` (approximate), `description` (specific code reference), `fix`.
+
 ## Output
 
 Write to `$OUT_DIR/db-results.json` using the same schema with `"category": "db"`.

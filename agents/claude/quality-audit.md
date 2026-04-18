@@ -59,15 +59,40 @@ Each → `severity: medium`, rule: `no-explicit-any`, fix: "Use specific type or
 
 Read all `.tsx`, `.jsx` files. Count lines. If > 300 lines → `severity: low`, rule: `max-component-lines`.
 
-### 8. DRY / SOLID analysis (AI-powered)
+### 8. AI code analysis
 
-For each source file, read its contents and list its exported functions/classes with their line counts.
-Look for:
-- **DRY violations**: near-identical logic blocks appearing in multiple files (same variable names, same control flow, just different constants)
-- **Single Responsibility violations**: components/classes that handle data fetching AND rendering AND business logic AND form validation all at once
-- **God objects**: classes/files with 10+ methods covering unrelated concerns
+Read all `.ts`, `.tsx`, `.js`, `.jsx` files under `$WORKSPACE` (skip `node_modules/`, `dist/`, `coverage/`, `*.test.*`, `*.spec.*`). Prioritize files matching: `*service*`, `*controller*`, `*handler*`, `*util*`, `*helper*`, `*hook*`, `*store*`, `*context*`.
 
-Report each violation as: `severity: medium|low`, rule: `dry-violation` or `solid-violation`.
+For each file (or batch of small files), analyze for issues that static tools cannot catch:
+
+**DRY violations**
+- Near-identical logic blocks appearing in ≥2 files — same control flow, same variable names, only constants differ
+- Repeated validation logic (e.g., the same email/UUID/date check copy-pasted across multiple services)
+- Each instance → `severity: medium`, rule: `dry-violation`, fix: "Extract shared logic into a utility function."
+
+**SOLID violations**
+- **Single Responsibility**: components/classes that handle data fetching AND state management AND rendering AND form validation all in one file → `severity: medium`, rule: `solid-srp`
+- **Open/Closed**: switch/if-else chains that must be edited to add new types instead of using polymorphism → `severity: low`, rule: `solid-ocp`
+- **Dependency Inversion**: business logic that directly imports and calls concrete infrastructure (DB clients, HTTP clients, file system) instead of injecting them → `severity: medium`, rule: `solid-dip`
+
+**God objects / files**
+- Classes or modules with 10+ exported functions covering unrelated concerns → `severity: medium`, rule: `god-object`
+- Files > 500 lines that mix multiple unrelated responsibilities → `severity: low`, rule: `god-file`
+
+**Business logic placement**
+- SQL queries or direct DB calls inside React components or route handler files → `severity: high`, rule: `logic-in-wrong-layer`
+- API response formatting logic inside domain/service classes → `severity: low`, rule: `logic-in-wrong-layer`
+
+**Error handling quality**
+- Empty catch blocks (`catch {}` or `catch (e) {}` with no action) → `severity: medium`, rule: `empty-catch`
+- Errors swallowed without logging → `severity: medium`, rule: `silent-error`
+- Async functions with no error handling at any call site → `severity: medium`, rule: `unhandled-async`
+
+**Naming and readability**
+- Single-letter variable names outside loop indexes → `severity: low`, rule: `naming`
+- Boolean variables/params not prefixed with `is`/`has`/`should` → `severity: low`, rule: `naming`
+
+Report each finding with: `severity`, `rule`, `file`, `line` (approximate), `description` (specific code reference), `fix`.
 
 ## Output format
 
