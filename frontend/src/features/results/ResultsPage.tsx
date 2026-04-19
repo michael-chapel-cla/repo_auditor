@@ -49,6 +49,13 @@ const COLUMNS: GridColDef<Finding>[] = [
   },
   { field: "rule", headerName: "Rule", width: 160 },
   {
+    field: "cwe",
+    headerName: "CWE",
+    width: 110,
+    renderCell: ({ row }) =>
+      row.cwe ? <Chip label={row.cwe} size="small" variant="outlined" /> : "—",
+  },
+  {
     field: "source",
     headerName: "Source",
     width: 120,
