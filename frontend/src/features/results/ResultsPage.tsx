@@ -48,6 +48,17 @@ const COLUMNS: GridColDef<Finding>[] = [
       row.file ? `${row.file}${row.line ? `:${row.line}` : ""}` : "—",
   },
   { field: "rule", headerName: "Rule", width: 160 },
+  {
+    field: "source",
+    headerName: "Source",
+    width: 120,
+    renderCell: ({ row }) =>
+      row.source ? (
+        <Chip label={row.source} size="small" variant="outlined" />
+      ) : (
+        "—"
+      ),
+  },
   { field: "fix", headerName: "Fix", flex: 1, minWidth: 200 },
 ];
 
@@ -62,6 +73,17 @@ const NPQ_COLUMNS: GridColDef<Finding>[] = [
   { field: "title", headerName: "Package / Signal", flex: 1, minWidth: 240 },
   { field: "rule", headerName: "Signal", width: 200 },
   { field: "description", headerName: "Detail", flex: 1, minWidth: 280 },
+  {
+    field: "source",
+    headerName: "Source",
+    width: 120,
+    renderCell: ({ row }) =>
+      row.source ? (
+        <Chip label={row.source} size="small" variant="outlined" />
+      ) : (
+        "—"
+      ),
+  },
   { field: "fix", headerName: "Remediation", flex: 1, minWidth: 200 },
 ];
 
