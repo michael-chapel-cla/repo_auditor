@@ -1,77 +1,118 @@
-# Repo Auditor
+# Repo Auditor — GitHub Copilot Quickstart
 
-> AI-powered repository auditing platform. Run security, code quality, API compliance, and database migration checks against any GitHub repository — using Claude Code, OpenAI Codex, or GitHub Copilot as the audit engine.
-
----
-
-## What it does
-
-Agents clone a target repository, run static analysis tools, and use LLM reasoning to surface issues that tools alone miss. Results are written to `reports/` as structured JSON, Markdown, and HTML. A React/MUI dashboard reads those reports — no backend audit logic required.
-
-**Audit categories:** Security · Code Quality · API Standards · DB Migrations · Contributors
+Run AI-powered audits on any GitHub repository using GitHub Copilot via GitHub Actions.
 
 ---
 
-## Quick start
+## Prerequisites
+
+| Requirement    | Details                                                                            |
+| -------------- | ---------------------------------------------------------------------------------- |
+| `gh` CLI       | [cli.github.com](https://cli.github.com) — must be authenticated (`gh auth login`) |
+| GitHub Actions | Workflow file `.github/workflows/audit.yml` must exist in this repo                |
+| Node.js ≥ 20   | For the report viewer only                                                         |
+
+---
+
+## 1. Authenticate the GitHub CLI
 
 ```bash
-git clone <this-repo> repo_auditor && cd repo_auditor
-cp .env.example .env        # add your AI key + target repos
-npm run bootstrap            # install deps + semgrep + gitleaks + flyway
-
-# Run an audit
-./scripts/run-with-claude.sh owner/repo   # Claude Code
-./scripts/run-with-codex.sh  owner/repo   # OpenAI Codex
-./scripts/run-with-copilot.sh myorg/repo-auditor owner/repo  # GitHub Copilot
-
-# View results
-npm run dev:api       # http://localhost:4000
-npm run dev:frontend  # http://localhost:5173
+gh auth login
 ```
 
----
-
-## Documentation
-
-| Doc | Description |
-| --- | ----------- |
-| [docs/instructions.md](docs/instructions.md) | Full install, configuration, and usage guide |
-| [ROADMAP.md](ROADMAP.md) | Planned features across 6 phases |
-| [docs/context/01-security.md](docs/context/01-security.md) | 20 security rules loaded by agents |
-| [docs/context/02-code-quality.md](docs/context/02-code-quality.md) | 18 code quality standards |
-| [docs/context/03-api-standards.md](docs/context/03-api-standards.md) | 24 API compliance rules |
-| [docs/context/04-db-migrations.md](docs/context/04-db-migrations.md) | 13 DB migration safety rules |
-| [scripts/report-schema.json](scripts/report-schema.json) | JSON schema all agents must produce |
+Select **GitHub.com**, **HTTPS**, and authenticate via browser. This grants the `repo` scope needed to clone SSO-protected repositories.
 
 ---
 
-## Agents
+## 2. Trigger an audit
 
-| Tool | Instructions | Slash command |
-| ---- | ------------ | ------------- |
-| Claude Code | `agents/claude/full-audit.md` | `/full-audit owner/repo` |
-| OpenAI Codex | `agents/codex/full-audit.md` | `codex --task agents/codex/full-audit.md` |
-| GitHub Copilot | `agents/copilot/audit-instructions.md` | Actions → Run workflow |
+In **GitHub Copilot Chat**, type:
+
+```
+Run a full audit on myorg/target-repo
+```
+
+Copilot will read `agents/copilot/audit-instructions.md` and execute the audit steps automatically.
 
 ---
 
-## Report output
+## 3. Results
+
+Copilot will:
+
+1. Clone the target repository into `workspace/`
+2. Run security, quality, API, and DB audits
+3. Write results to `reports/{owner}_{repo}/{auditId}/results.json`
+4. Generate `report.md` and `report.html`
+
+Once complete, the findings are visible in the **Results** page of this viewer.
+
+---
+
+## 4. View results
+
+Start the report viewer:
+
+```bash
+npm run bootstrap      # first time only
+npm run dev:api        # API server on http://localhost:4000
+npm run dev:frontend   # UI on http://localhost:5173
+```
+
+Open **http://localhost:5173** → **Dashboard** to see scores, or **Results** to browse findings.
+
+---
+
+## Private npm registries
+
+If the target repo's `.npmrc` references `${NPM_TOKEN}` (e.g. Azure Artifacts), add the token to `.env` before running:
+
+```bash
+echo "NPM_TOKEN=your-token-here" >> .env
+```
+
+Without it, `npm audit` is skipped and an `info` finding is recorded.
+
+---
+
+## Output structure
 
 ```
 reports/
-└── {owner_repo}/
-    └── {auditId}/
-        ├── results.json      ← structured findings (all categories)
-        ├── contributors.json ← commit stats per author
-        ├── npm-audit.json    ← raw npm audit output
-        ├── report.md         ← human-readable summary
-        └── report.html       ← color-coded HTML report
+  owner_repo/
+    {auditId}/
+      results.json      ← findings + scores (all categories)
+      npm-audit.json    ← raw npm audit output
+      report.md         ← human-readable summary
+      report.html       ← styled HTML report
+      contributors.json ← commit stats + leaderboard
 ```
 
-Overall score: 0–100, starting at 100 with penalties per finding (critical −25, high −15, medium −7, low −3).
+### Severity levels
+
+| Level      | Meaning                  |
+| ---------- | ------------------------ |
+| `critical` | Immediate fix required   |
+| `high`     | Fix before next release  |
+| `medium`   | Schedule for remediation |
+| `low`      | Best-effort              |
+| `info`     | Informational only       |
 
 ---
 
-## License
+## Audit categories
 
-MIT
+| Category   | What it checks                                                             |
+| ---------- | -------------------------------------------------------------------------- |
+| `security` | Hardcoded secrets, injection, unsafe patterns (gitleaks, semgrep, AI scan) |
+| `npm`      | Dependency vulnerabilities (`npm audit`)                                   |
+| `quality`  | ESLint, TypeScript errors, unused deps, console.log, `any` types           |
+| `api`      | OpenAPI spec, versioning, auth, CORS, rate-limiting                        |
+| `db`       | Migration naming, transactions, SQL injection safety                       |
+
+---
+
+## Further reading
+
+- [docs/instructions.md](docs/instructions.md) — full install and configuration guide (Claude, Codex, Copilot)
+- [ROADMAP.md](ROADMAP.md) — planned features across 6 phases

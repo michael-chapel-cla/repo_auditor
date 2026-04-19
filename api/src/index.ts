@@ -329,12 +329,12 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    // GET /api/readme — serve the full instructions doc
+    // GET /api/readme — serve the Copilot quickstart doc
     if (pathname === "/api/readme") {
       const readmePath = path.join(
         PROJECT_ROOT,
         "docs",
-        "instructions.md",
+        "COPILOT-QUICKSTART.md",
       );
       const content = await readFile(readmePath, "utf8");
       res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8" });
