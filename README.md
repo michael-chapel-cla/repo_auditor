@@ -531,6 +531,23 @@ Ensure Docker Desktop is running and you have the VS Code Dev Containers extensi
 
 ---
 
+## Roadmap
+
+See [ROADMAP.md](ROADMAP.md) for the full plan with feature tables and sequencing guidance.
+
+| Phase | Theme | Highlights |
+|-------|-------|------------|
+| **1 — Richer Findings** | Accuracy | Baseline suppression, auto-fix diffs, context-aware severity, cross-tool deduplication |
+| **2 — Trend Tracking** | Visibility | Score history chart, finding lifecycle (open/resolved), regression alerts, contributor blame |
+| **3 — Language Support** | Breadth | Python, Go, Docker/Terraform/IaC scanning without changing agent architecture |
+| **4 — Dev Workflow** | Shift left | PR-diff audit mode, GitHub PR comment bot, pre-commit hook generator, VS Code extension |
+| **5 — Deeper AI** | Intelligence | Cross-file dataflow, architecture diagrams, auto-remediation PRs, custom rule authoring |
+| **6 — Enterprise** | Scale | Org-wide dashboard, policy enforcement, SBOM generation, OWASP/SOC2/PCI compliance mapping |
+
+Recommended starting order: Phase 1 → 2 → 4 for immediate developer value. Phase 3 and 5 are independent tracks. Phase 6 follows when the tool is used across multiple teams.
+
+---
+
 ## License
 
 MIT
