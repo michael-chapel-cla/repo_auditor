@@ -8,12 +8,63 @@ import {
   ListItemText,
   Divider,
   Chip,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import {
   Terminal as TerminalIcon,
   SmartToy as SmartToyIcon,
   GitHub as GitHubIcon,
+  Security as SecurityIcon,
 } from "@mui/icons-material";
+
+const AI_LLM_CWES = [
+  {
+    cwe: "CWE-1427",
+    name: "Improper Neutralization of Input Used in a Prompt",
+    rules: "S01, S25, S26, S28, S30",
+    severity: "CRITICAL/HIGH",
+    note: "Prompt injection — user/repo content in system role",
+  },
+  {
+    cwe: "CWE-1426",
+    name: "Improper Validation of Generative AI Output",
+    rules: "S02, S29",
+    severity: "CRITICAL",
+    note: "Unvalidated AI output used as code, command, or piped to second LLM",
+  },
+  {
+    cwe: "CWE-1434",
+    name: "Improper Handling of Insufficient Permissions in AI Prompting",
+    rules: "S31",
+    severity: "HIGH",
+    note: "Over-privileged agent — more tools/scopes than required",
+  },
+  {
+    cwe: "CWE-200",
+    name: "Exposure of Sensitive Information to an Unauthorized Actor",
+    rules: "S24",
+    severity: "HIGH",
+    note: "Secrets, DB schema, or internal URLs embedded in system prompt",
+  },
+  {
+    cwe: "CWE-94",
+    name: "Improper Control of Generation of Code (Code Injection)",
+    rules: "S20",
+    severity: "HIGH",
+    note: "eval() / new Function() / LLM-generated code executed without validation",
+  },
+  {
+    cwe: "CWE-400",
+    name: "Uncontrolled Resource Consumption",
+    rules: "S27",
+    severity: "HIGH",
+    note: "Context window flooding — no token/character cap on content passed to LLM",
+  },
+];
 
 const AGENT_TOOLS = [
   {
@@ -151,6 +202,82 @@ export default function AuditPage() {
             <ListItemText primary="This viewer reads those files — refresh Results page when the agent finishes" />
           </ListItem>
         </List>
+      </Paper>
+
+      <Paper sx={{ p: 3, mt: 3 }}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 2 }}>
+          <SecurityIcon fontSize="small" color="error" />
+          <Typography variant="subtitle1" fontWeight="bold">
+            AI / LLM CWE Coverage
+          </Typography>
+          <Chip label="6 CWEs" size="small" color="error" variant="outlined" />
+        </Box>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          The security audit checks for these MITRE CWEs specific to AI and LLM
+          integrations, in addition to the standard 25 security rules.
+        </Typography>
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ background: "#f5f5f5" }}>
+              <TableCell>
+                <strong>CWE</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Name</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Rules</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Severity</strong>
+              </TableCell>
+              <TableCell>
+                <strong>Detects</strong>
+              </TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {AI_LLM_CWES.map((row) => (
+              <TableRow key={row.cwe} hover>
+                <TableCell>
+                  <Chip
+                    label={row.cwe}
+                    size="small"
+                    variant="outlined"
+                    color={
+                      row.severity.startsWith("CRITICAL") ? "error" : "warning"
+                    }
+                    sx={{ fontFamily: "monospace", fontSize: "0.73rem" }}
+                  />
+                </TableCell>
+                <TableCell sx={{ fontSize: "0.82rem" }}>{row.name}</TableCell>
+                <TableCell
+                  sx={{
+                    fontFamily: "monospace",
+                    fontSize: "0.78rem",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {row.rules}
+                </TableCell>
+                <TableCell>
+                  <Chip
+                    label={row.severity}
+                    size="small"
+                    color={
+                      row.severity.startsWith("CRITICAL") ? "error" : "warning"
+                    }
+                    variant="filled"
+                    sx={{ fontSize: "0.7rem" }}
+                  />
+                </TableCell>
+                <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
+                  {row.note}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </Paper>
     </Box>
   );

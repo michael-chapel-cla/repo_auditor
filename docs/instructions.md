@@ -167,7 +167,7 @@ repo_auditor/
 │   └── context/            # Rule sets loaded by agents before each audit
 │       ├── 01-security.md      # 20 security rules with severity + CWE
 │       ├── 02-code-quality.md  # 18 quality rules with detection commands
-│       ├── 03-api-standards.md # 24 API compliance rules
+│       ├── 03-api-standards.md # 28 API compliance rules (sourced from docs/API_STANDARDS.md)
 │       └── 04-db-migrations.md # 13 DB migration safety rules
 │
 ├── scripts/
@@ -213,13 +213,13 @@ repo_auditor/
 
 Each audit produces findings with a severity score (starting at 100, penalties applied per finding).
 
-| Category      | Agent file                        | Slash command        | What it checks                                                                                        |
-| ------------- | --------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------- |
-| Security      | `agents/claude/security-audit.md` | `/security-audit`    | npm audit, gitleaks, Semgrep, AI code scan (injection, secrets, JWT, XSS, path traversal)             |
-| Code Quality  | `agents/claude/quality-audit.md`  | `/quality-audit`     | ESLint, test coverage, console.log, unused deps, TypeScript any, component size, DRY/SOLID            |
-| API Standards | `agents/claude/api-audit.md`      | `/api-audit`         | OpenAPI spec, URI versioning, HTTP methods, status codes, auth, CORS, rate limiting, security headers |
-| DB Migrations | `agents/claude/db-audit.md`       | `/db-audit`          | Flyway naming, duplicate versions, edited migrations, SQL injection, transactions, DROP safeguards    |
-| Contributors  | `agents/claude/contributors.md`   | (part of full-audit) | Commit stats per author, weekly activity timeline                                                     |
+| Category      | Agent file                        | Slash command        | What it checks                                                                                                                                                                         |
+| ------------- | --------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Security      | `agents/claude/security-audit.md` | `/security-audit`    | npm audit, gitleaks, Semgrep, AI code scan (injection, secrets, JWT, XSS, path traversal)                                                                                              |
+| Code Quality  | `agents/claude/quality-audit.md`  | `/quality-audit`     | ESLint, test coverage, console.log, unused deps, TypeScript any, component size, DRY/SOLID                                                                                             |
+| API Standards | `agents/claude/api-audit.md`      | `/api-audit`         | OpenAPI spec, URI versioning, HTTP methods, status codes, auth, CORS, rate limiting, security headers, directory structure, contract-first, Postman collection, backward compatibility |
+| DB Migrations | `agents/claude/db-audit.md`       | `/db-audit`          | Flyway naming, duplicate versions, edited migrations, SQL injection, transactions, DROP safeguards                                                                                     |
+| Contributors  | `agents/claude/contributors.md`   | (part of full-audit) | Commit stats per author, weekly activity timeline                                                                                                                                      |
 
 ### Severity scale
 
@@ -535,14 +535,14 @@ Ensure Docker Desktop is running and you have the VS Code Dev Containers extensi
 
 See [ROADMAP.md](../ROADMAP.md) for the full plan with feature tables and sequencing guidance.
 
-| Phase | Theme | Highlights |
-|-------|-------|------------|
-| **1 — Richer Findings** | Accuracy | Baseline suppression, auto-fix diffs, context-aware severity, cross-tool deduplication |
-| **2 — Trend Tracking** | Visibility | Score history chart, finding lifecycle (open/resolved), regression alerts, contributor blame |
-| **3 — Language Support** | Breadth | Python, Go, Docker/Terraform/IaC scanning without changing agent architecture |
-| **4 — Dev Workflow** | Shift left | PR-diff audit mode, GitHub PR comment bot, pre-commit hook generator, VS Code extension |
-| **5 — Deeper AI** | Intelligence | Cross-file dataflow, architecture diagrams, auto-remediation PRs, custom rule authoring |
-| **6 — Enterprise** | Scale | Org-wide dashboard, policy enforcement, SBOM generation, OWASP/SOC2/PCI compliance mapping |
+| Phase                    | Theme        | Highlights                                                                                   |
+| ------------------------ | ------------ | -------------------------------------------------------------------------------------------- |
+| **1 — Richer Findings**  | Accuracy     | Baseline suppression, auto-fix diffs, context-aware severity, cross-tool deduplication       |
+| **2 — Trend Tracking**   | Visibility   | Score history chart, finding lifecycle (open/resolved), regression alerts, contributor blame |
+| **3 — Language Support** | Breadth      | Python, Go, Docker/Terraform/IaC scanning without changing agent architecture                |
+| **4 — Dev Workflow**     | Shift left   | PR-diff audit mode, GitHub PR comment bot, pre-commit hook generator, VS Code extension      |
+| **5 — Deeper AI**        | Intelligence | Cross-file dataflow, architecture diagrams, auto-remediation PRs, custom rule authoring      |
+| **6 — Enterprise**       | Scale        | Org-wide dashboard, policy enforcement, SBOM generation, OWASP/SOC2/PCI compliance mapping   |
 
 Recommended starting order: Phase 1 → 2 → 4 for immediate developer value. Phase 3 and 5 are independent tracks. Phase 6 follows when the tool is used across multiple teams.
 

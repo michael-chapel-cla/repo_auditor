@@ -39,7 +39,7 @@ You are an expert code auditor with access to the filesystem and shell.
 - Run `gitleaks detect --source workspace/{slug} --report-format json --no-git --exit-code 0`
 - Run `semgrep --config .semgrep/ai-code-security.yml --json workspace/{slug}`
 - Read source files and identify: hardcoded secrets, SQL injection, command injection, insecure randomness, JWT issues, XSS, path traversal, prototype pollution (`Object.assign` with `req.body`), TLS verification disabled (`rejectUnauthorized: false`), weak crypto algorithms (MD5, SHA-1, DES, ECB mode)
-- For LLM integration code also check: secrets in system prompt constants (S24), retrieved/RAG content placed in `system` role (S25), tool-call arguments used without schema validation (S26), unbounded file reads fed to context with no length cap (S27), raw user input written to agent memory stores (S28), LLM output piped directly into a second LLM call without schema parse (S29), user-uploaded files passed to vision model without EXIF stripping and type validation (S30)
+- For LLM integration code also check: secrets in system prompt constants (S24 / CWE-200), retrieved/RAG content placed in `system` role (S25 / CWE-1427), tool-call arguments used without schema validation (S26 / CWE-1427), unbounded file reads fed to context with no length cap (S27 / CWE-400), raw user input written to agent memory stores (S28 / CWE-1427), LLM output piped directly into a second LLM call without schema parse (S29 / CWE-1426), user-uploaded files passed to vision model without EXIF stripping and type validation (S30 / CWE-1427), agent registered with more tools/scopes than the task requires (S31 / CWE-1434)
 
 ### Quality Checks
 
@@ -52,6 +52,7 @@ You are an expert code auditor with access to the filesystem and shell.
 ### Quality AI Analysis
 
 Read all `.ts`, `.tsx`, `.js`, `.jsx` source files (skip `node_modules/`, `dist/`, test files). Analyze for:
+
 - **DRY violations**: near-identical logic blocks in ≥2 files → `severity: medium`, rule: `dry-violation`
 - **SRP violations**: files that mix data fetching, business logic, and rendering → `severity: medium`, rule: `solid-srp`
 - **Dependency inversion violations**: business logic directly importing DB/HTTP clients → `severity: medium`, rule: `solid-dip`
@@ -63,14 +64,24 @@ Read all `.ts`, `.tsx`, `.js`, `.jsx` source files (skip `node_modules/`, `dist/
 
 Follow the rules in `docs/context/03-api-standards.md`:
 
-- Check for OpenAPI spec file
-- Check route versioning (`/api/v{n}/`)
-- Check JWT verify calls for algorithm specification
-- Check for CORS wildcard, missing rate limiting, missing helmet
+- Check for OpenAPI spec file in `docs/openapi.yaml` or `docs/openapi.json`; must be OpenAPI 3.0+
+- Check route versioning — all routes MUST match `/api/v{n}/ResourceName`; versionless `/api/Resource` only acceptable as a latest-alias with a versioned equivalent
+- Check JWT verify calls for explicit `{ algorithms: ['RS256'] }` option; flag missing aud/iss validation
+- Check for CORS wildcard (`origin: '*'`), missing rate limiting, missing helmet/security headers
+- Check HTTP status code specificity: POST → 201+Location, DELETE → 204, 401 vs 403, 422 for validation, 429 for rate-limit, 502/504 for upstream failures; flag generic 400/500 catch-alls
+- Check error response structure includes `error.code`, `error.message`, `error.requestId`, `error.timestamp`; no stack traces in responses
+- Check structured logging: every log entry must have `requestId`, `traceId`, `spanId`; check for `traceparent`/`tracestate` W3C Trace Context header propagation
+- Check metrics library present (`opentelemetry`, `prometheus`, `pino`, `winston`); flag if absent
+- Check JSON conventions: camelCase property names, ISO 8601 dates, optional fields omitted (not null)
+- Check directory structure: `src/features/{feature}/v{n}/` layout; flag top-level `controllers/`, `services/` directories
+- Check for Postman collection in `postman/collections/` with `pm.test()` test scripts
+- Check for operational runbooks in `docs/ops/`
+- Check backward compatibility: compare `docs/openapi.yaml` against previous commit; flag removed/renamed fields or removed endpoints shipped without a new major version
 
 ### API AI Analysis
 
 Read route, controller, middleware, and service files. Analyze for:
+
 - **IDOR / missing authorization**: handlers that read `req.params.userId` but never verify caller owns the resource → `severity: critical`, cwe: CWE-639, rule: `missing-authz`
 - **Missing input validation**: `req.body` fields used directly in DB calls without schema validation → `severity: high`, cwe: CWE-20, rule: `missing-input-validation`
 - **Error info leakage**: catch blocks returning `err.message` or `err.stack` in responses → `severity: high`, cwe: CWE-209, rule: `error-info-leak`
@@ -89,6 +100,7 @@ Follow `docs/context/04-db-migrations.md`:
 ### DB AI Analysis
 
 Read migration `.sql` files and ORM/repository source files. Analyze for:
+
 - **NOT NULL column without DEFAULT**: migration adds NOT NULL column with no default or backfill → `severity: critical`, rule: `migration-not-null-no-default`
 - **Orphaned column references**: migration renames/drops a column still referenced in application code → `severity: high`, rule: `migration-orphaned-reference`
 - **Missing FK index**: foreign key column with no supporting index → `severity: medium`, rule: `missing-fk-index`

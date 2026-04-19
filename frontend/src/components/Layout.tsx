@@ -19,6 +19,7 @@ import {
   Group as GroupIcon,
   Menu as MenuIcon,
   Article as ArticleIcon,
+  Shield as ShieldIcon,
 } from "@mui/icons-material";
 
 const DRAWER_WIDTH = 220;
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { label: "Results", icon: <AssessmentIcon />, path: "/results" },
   { label: "Contributors", icon: <GroupIcon />, path: "/contributors" },
   { label: "Quickstart", icon: <ArticleIcon />, path: "/readme" },
+  { label: "Coverage", icon: <ShieldIcon />, path: "/coverage" },
 ];
 
 interface LayoutProps {

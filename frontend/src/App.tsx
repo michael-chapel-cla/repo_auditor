@@ -4,6 +4,7 @@ import DashboardPage from "./features/dashboard/DashboardPage.tsx";
 import ResultsPage from "./features/results/ResultsPage.tsx";
 import ContributorsPage from "./features/contributors/ContributorsPage.tsx";
 import ReadmePage from "./features/readme/ReadmePage.tsx";
+import CoveragePage from "./features/coverage/CoveragePage.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
 
 export default function App() {
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/results/:auditId" element={<ResultsPage />} />
           <Route path="/contributors" element={<ContributorsPage />} />
           <Route path="/readme" element={<ReadmePage />} />
+          <Route path="/coverage" element={<CoveragePage />} />
         </Routes>
       </Layout>
     </ErrorBoundary>

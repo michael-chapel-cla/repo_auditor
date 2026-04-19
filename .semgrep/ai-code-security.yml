@@ -222,7 +222,7 @@ rules:
     languages: [javascript, typescript]
     severity: ERROR
     metadata:
-      cwe: "CWE-77"
+      cwe: "CWE-1427"
 
   # S26 — tool-call arguments used without schema validation
   - id: tool-call-args-no-validation
@@ -235,7 +235,7 @@ rules:
     languages: [javascript, typescript]
     severity: ERROR
     metadata:
-      cwe: "CWE-77"
+      cwe: "CWE-1427"
 
   # S27 — unbounded file/fetch content fed to LLM without length cap
   - id: llm-context-no-length-cap
@@ -261,7 +261,7 @@ rules:
     languages: [javascript, typescript]
     severity: ERROR
     metadata:
-      cwe: "CWE-74"
+      cwe: "CWE-1426"
 
   # S30 — user-uploaded file passed directly to multimodal model without EXIF stripping
   - id: multimodal-upload-no-sanitize
@@ -272,4 +272,4 @@ rules:
     languages: [javascript, typescript]
     severity: WARNING
     metadata:
-      cwe: "CWE-77"
+      cwe: "CWE-1427"

@@ -63,41 +63,54 @@ You are an expert code auditor. When asked to audit a repository:
 
    **System prompt exfiltration** (S24): system prompt string constants containing API keys, internal URLs, DB schema, or business secrets — harmful if the model is prompted to repeat them. CWE-200, severity: high.
 
-   **RAG / retrieval injection** (S25): retrieved chunks or vector store results concatenated into the `system` role rather than placed as framed untrusted data in the `user` role. CWE-77, severity: critical.
+   **RAG / retrieval injection** (S25): retrieved chunks or vector store results concatenated into the `system` role rather than placed as framed untrusted data in the `user` role. CWE-1427, severity: critical.
 
-   **Agent tool-call hijacking** (S26): `response.tool_calls` / `function_call` arguments dispatched to `fs`, `exec`, HTTP, or DB without Zod validation and path/URL bounds checking. CWE-77, severity: critical.
+   **Agent tool-call hijacking** (S26): `response.tool_calls` / `function_call` arguments dispatched to `fs`, `exec`, HTTP, or DB without Zod validation and path/URL bounds checking. CWE-1427, severity: critical.
 
    **Context window flooding** (S27): file reads or HTTP bodies fed to LLM context without a token/character cap; missing "sandwich" pattern re-stating key constraints after long content. CWE-400, severity: high.
 
-   **Agent memory poisoning** (S28): memory store reads placed in the `system` role, or raw user input written to persistent memory without injection screening. CWE-77, severity: high.
+   **Agent memory poisoning** (S28): memory store reads placed in the `system` role, or raw user input written to persistent memory without injection screening. CWE-1427, severity: high.
 
-   **Second-order / output smuggling** (S29): `response.choices[0].message.content` used directly as `content` in a second LLM call without an intermediate schema parse. CWE-74, severity: critical.
+   **Second-order / output smuggling** (S29): `response.choices[0].message.content` used directly as `content` in a second LLM call without an intermediate schema parse. CWE-1426, severity: critical.
 
-   **Multimodal injection** (S30): user-uploaded images/PDFs passed to a vision model without EXIF stripping, magic-byte file-type validation, and a low-privilege description step before agentic use. CWE-77, severity: high.
+   **Multimodal injection** (S30): user-uploaded images/PDFs passed to a vision model without EXIF stripping, magic-byte file-type validation, and a low-privilege description step before agentic use. CWE-1427, severity: high.
+
+   **Over-privileged AI agent** (S31): agent registered with more tools, scopes, or data access than the task requires — broad filesystem/shell/DB tools with no argument constraints, no least-privilege enforcement, or admin DB credentials passed to the agent context. CWE-1434, severity: high.
 
 3b. **AI-powered code analysis** — read source files directly and apply your reasoning to find issues static tools miss:
 
-   **Quality analysis** (read `.ts`, `.tsx`, `.js`, `.jsx`; skip `node_modules/`, `dist/`, test files):
-   - DRY violations: near-identical logic in ≥2 files → `category: quality`, `severity: medium`, rule: `dry-violation`
-   - SRP violations: files mixing data fetching, business logic, and rendering → `severity: medium`, rule: `solid-srp`
-   - Business logic in wrong layer: SQL in React components, HTTP calls in domain classes → `severity: high`, rule: `logic-in-wrong-layer`
-   - Silent error handling: empty catch blocks, swallowed errors → `severity: medium`, rule: `silent-error`
-   - God objects: classes with 10+ unrelated methods → `severity: medium`, rule: `god-object`
+**Quality analysis** (read `.ts`, `.tsx`, `.js`, `.jsx`; skip `node_modules/`, `dist/`, test files):
 
-   **API analysis** (read route, controller, middleware, service files):
-   - IDOR / missing authorization: handlers reading `req.params.userId` without verifying ownership → `category: api`, `severity: critical`, cwe: CWE-639, rule: `missing-authz`
-   - Missing input validation: `req.body` fields used in DB calls without schema check → `severity: high`, cwe: CWE-20, rule: `missing-input-validation`
-   - Error info leakage: catch blocks returning `err.message`/`err.stack` in responses → `severity: high`, cwe: CWE-209, rule: `error-info-leak`
-   - GET side effects: GET handlers that write to DB → `severity: high`, rule: `get-side-effect`
-   - Unhandled async: fire-and-forget promises in route handlers → `severity: medium`, rule: `unhandled-async`
+- DRY violations: near-identical logic in ≥2 files → `category: quality`, `severity: medium`, rule: `dry-violation`
+- SRP violations: files mixing data fetching, business logic, and rendering → `severity: medium`, rule: `solid-srp`
+- Business logic in wrong layer: SQL in React components, HTTP calls in domain classes → `severity: high`, rule: `logic-in-wrong-layer`
+- Silent error handling: empty catch blocks, swallowed errors → `severity: medium`, rule: `silent-error`
+- God objects: classes with 10+ unrelated methods → `severity: medium`, rule: `god-object`
 
-   **DB analysis** (read migration `.sql` files and ORM/repository source files):
-   - NOT NULL column without DEFAULT or backfill → `category: db`, `severity: critical`, rule: `migration-not-null-no-default`
-   - Column rename/drop still referenced in application code → `severity: high`, rule: `migration-orphaned-reference`
-   - Destructive operations with no rollback strategy comment → `severity: high`, rule: `no-rollback-strategy`
-   - N+1 query patterns: DB calls inside loops → `severity: medium`, rule: `n-plus-one-query`
-   - ORM raw query with string interpolation → `severity: critical`, cwe: CWE-89, rule: `orm-raw-injection`
-   - DB connection config with `ssl: false` → `severity: high`, rule: `db-ssl-disabled`
+**API analysis** (read route, controller, middleware, service files):
+
+- IDOR / missing authorization: handlers reading `req.params.userId` without verifying ownership → `category: api`, `severity: critical`, cwe: CWE-639, rule: `missing-authz`
+- Missing input validation: `req.body` fields used in DB calls without schema check → `severity: high`, cwe: CWE-20, rule: `missing-input-validation`
+- Error info leakage: catch blocks returning `err.message`/`err.stack` in responses → `severity: high`, cwe: CWE-209, rule: `error-info-leak`
+- GET side effects: GET handlers that write to DB → `severity: high`, rule: `get-side-effect`
+- Unhandled async: fire-and-forget promises in route handlers → `severity: medium`, rule: `unhandled-async`
+- HTTP status code specificity (A09): POST returning 200 instead of 201+Location → `severity: medium`; generic 400/500 catch-all instead of 401/403/409/422/429/502/504 → `severity: medium`; DELETE returning body instead of 204 → `severity: low`; run `grep -rn 'status(400)\|status(500)' src/ | grep -v '401\|403\|404\|409\|422\|429\|502\|504'`
+- JSON payload conventions (A22): snake_case or non-camelCase property names → `severity: low`, rule: `json-naming`; dates not ISO 8601 → `severity: low`, rule: `iso-date`; optional fields returned as `null` instead of being omitted → `severity: low`, rule: `null-vs-omit`
+- URI versioning (A03): versionless `/api/Resource` route with no corresponding `/api/v{n}/Resource` route → `severity: medium`, rule: `api-versioning`
+- W3C Trace Context (A18): no `traceparent`/`tracestate` header propagation → `severity: low`, rule: `missing-trace-context`; no metrics library (`opentelemetry`, `prometheus`, `pino`) → `severity: low`, rule: `missing-metrics`
+- Directory structure (A25): top-level `src/controllers/`, `src/services/`, `src/repositories/` instead of `src/features/{feature}/v{n}/` → `severity: medium`, rule: `dir-structure`; feature dirs with no version subdirectory → `severity: low`, rule: `dir-structure`
+- Postman collection (A26): no `postman/collections/*.json` or collection has no `pm.test()` scripts → `severity: low`, rule: `missing-postman`
+- Operational runbooks (A27): `docs/ops/` missing or empty → `severity: low`, rule: `missing-runbooks`
+- Backward compatibility (A28): run `git diff HEAD~1 HEAD -- docs/openapi.yaml` — flag removed/renamed response fields, changed field types, removed endpoints, or newly-required request fields shipped without a new major version number → `severity: high`, rule: `breaking-change`
+
+**DB analysis** (read migration `.sql` files and ORM/repository source files):
+
+- NOT NULL column without DEFAULT or backfill → `category: db`, `severity: critical`, rule: `migration-not-null-no-default`
+- Column rename/drop still referenced in application code → `severity: high`, rule: `migration-orphaned-reference`
+- Destructive operations with no rollback strategy comment → `severity: high`, rule: `no-rollback-strategy`
+- N+1 query patterns: DB calls inside loops → `severity: medium`, rule: `n-plus-one-query`
+- ORM raw query with string interpolation → `severity: critical`, cwe: CWE-89, rule: `orm-raw-injection`
+- DB connection config with `ssl: false` → `severity: high`, rule: `db-ssl-disabled`
 
 4. **Collect contributor statistics** from the cloned workspace:
 

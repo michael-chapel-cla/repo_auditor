@@ -1,0 +1,6 @@
+AUDIT_ID=8234f7fd-a816-4223-9ce6-4748d5009c48
+AUDIT_TS=2026-04-17T00:00:00Z
+SLUG=CLADevOps_web-api-documents-ai
+OUT_DIR=reports/CLADevOps_web-api-documents-ai/8234f7fd-a816-4223-9ce6-4748d5009c48
+WORKSPACE_DIR=workspace/CLADevOps_web-api-documents-ai
+REPO=CLADevOps/web-api-documents-ai
