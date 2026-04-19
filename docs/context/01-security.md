@@ -28,6 +28,9 @@
 | S18 | Missing security headers (helmet/CSP/HSTS)         | MEDIUM   | CWE-693  | Headers      |
 | S19 | Sensitive data (passwords/tokens) in logs          | MEDIUM   | CWE-532  | Logging      |
 | S20 | `eval()` / `new Function()` / `setTimeout(string)` | HIGH     | CWE-94   | Injection    |
+| S21 | Prototype pollution via user-controlled object keys | HIGH     | CWE-1321 | Injection    |
+| S22 | TLS verification disabled (`rejectUnauthorized: false`) | HIGH  | CWE-295  | Crypto       |
+| S23 | Weak cryptographic algorithm (MD5, SHA-1, DES, ECB)  | HIGH    | CWE-327  | Crypto       |
 
 ---
 
@@ -754,6 +757,144 @@ runInNewContext(code, {}, { timeout: 100 }); // ✅ isolated context
 // Or better: don't execute user code at all
 setTimeout(() => doSomething(), 1000); // ✅ function form
 ```
+
+---
+
+## S21 — Prototype Pollution via User-Controlled Object Keys
+
+**Severity**: HIGH | **CWE**: CWE-1321
+
+When user-supplied objects are merged into application objects without key filtering, an attacker can inject `__proto__` or `constructor` keys and modify the prototype of all objects in the process.
+
+### Detect
+
+```
+Pattern: Object.assign(target, req.body)        — merging untrusted object
+Pattern: _.merge(config, userInput)             — lodash deep merge with user data
+Pattern: target[req.body.key] = req.body.value  — dynamic key assignment from request
+Pattern: for (key in req.body) { obj[key] = req.body[key] }
+```
+
+### ❌ NEVER
+
+```typescript
+Object.assign(config, req.body); // ❌ — if body = { __proto__: { admin: true } }
+_.merge(options, userInput);     // ❌ — classic lodash prototype pollution vector
+```
+
+### ✅ ALWAYS
+
+```typescript
+// Validate and destructure only known keys
+const { name, email } = UserSchema.parse(req.body); // Zod strips unknown keys
+const safe = Object.create(null); // null prototype — cannot be polluted
+Object.assign(safe, { name, email });
+
+// If merging is genuinely needed, sanitize keys first:
+function safeMerge(target: Record<string, unknown>, source: Record<string, unknown>) {
+  for (const key of Object.keys(source)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
+    target[key] = source[key];
+  }
+}
+```
+
+---
+
+## S22 — TLS Verification Disabled
+
+**Severity**: HIGH | **CWE**: CWE-295
+
+Disabling TLS certificate verification allows man-in-the-middle attacks — any party on the network can intercept and modify HTTPS traffic.
+
+### Detect
+
+```
+Pattern: rejectUnauthorized: false
+Pattern: rejectUnauthorized: 0
+Pattern: verify: false     — in request/TLS options
+Pattern: NODE_TLS_REJECT_UNAUTHORIZED = '0'
+Pattern: ssl: false        — in DB connection config
+Pattern: sslmode=disable   — in connection string
+Pattern: strictSSL: false  — in older HTTP libs
+```
+
+### ❌ NEVER
+
+```typescript
+const response = await fetch(url, {
+  // @ts-ignore
+  agent: new https.Agent({ rejectUnauthorized: false }), // ❌ MitM attack surface
+});
+
+const db = new Client({ ssl: false }); // ❌ DB traffic unencrypted
+```
+
+### ✅ ALWAYS
+
+```typescript
+const response = await fetch(url); // ✅ default TLS verification is on
+
+// If using a private CA, provide the CA cert — don't disable verification:
+const agent = new https.Agent({ ca: fs.readFileSync('internal-ca.pem') }); // ✅
+const db = new Client({ ssl: { rejectUnauthorized: true } }); // ✅
+```
+
+**Exception**: `rejectUnauthorized: false` may be acceptable in local development only — never in production code paths. Flag any occurrence unless it is inside a clearly guarded `if (process.env.NODE_ENV === 'development')` block.
+
+---
+
+## S23 — Weak Cryptographic Algorithm
+
+**Severity**: HIGH | **CWE**: CWE-327
+
+MD5 and SHA-1 are cryptographically broken (collision attacks proven). DES and 3DES have inadequate key lengths. ECB mode leaks patterns in ciphertext.
+
+### Detect
+
+```
+Pattern: createHash('md5')
+Pattern: createHash('sha1')
+Pattern: createCipheriv('des', ...)
+Pattern: createCipheriv('des-ede', ...)  — 3DES
+Pattern: createCipheriv('aes-128-ecb', ...)
+Pattern: createCipheriv('aes-256-ecb', ...)
+Pattern: crypto.createHash("MD5")       — case-insensitive
+Pattern: hashlib.md5(...)               — Python
+Pattern: MessageDigest.getInstance("MD5")  — Java
+```
+
+### ❌ NEVER
+
+```typescript
+import { createHash, createCipheriv } from 'node:crypto';
+
+const hash = createHash('md5').update(password).digest('hex');       // ❌ broken
+const sig  = createHash('sha1').update(data).digest('hex');           // ❌ broken
+const cipher = createCipheriv('des', key, iv);                        // ❌56-bit key
+const aes = createCipheriv('aes-256-ecb', key, Buffer.alloc(0));      // ❌ ECB leaks patterns
+```
+
+### ✅ ALWAYS
+
+```typescript
+// Hashing (non-password data)
+const hash = createHash('sha256').update(data).digest('hex');         // ✅
+
+// Password hashing — use a KDF, never a raw hash
+import argon2 from 'argon2';
+const stored = await argon2.hash(password);                           // ✅
+
+// Symmetric encryption
+const cipher = createCipheriv('aes-256-gcm', key, iv);               // ✅ authenticated
+```
+
+| Use case | Use | Never |
+|---|---|---|
+| Data integrity hash | SHA-256, SHA-384 | MD5, SHA-1 |
+| Password storage | Argon2id, bcrypt | Any raw hash |
+| Symmetric encryption | AES-256-GCM | DES, 3DES, AES-ECB |
+| HMAC | HMAC-SHA256 | HMAC-MD5, HMAC-SHA1 |
 
 ---
 

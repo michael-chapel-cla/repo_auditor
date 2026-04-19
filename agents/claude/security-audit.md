@@ -121,8 +121,11 @@ For each file (or batch of small files), analyze for:
 - **Path traversal** (user path params used in `fs` operations without bounds checking)
 - **Prompt injection — Azure OpenAI** (S01): this repo uses `AzureOpenAI` from the `openai` npm package. System prompts are messages with `role: 'system'` inside the `messages` array of `chat.completions.create()`. Flag any call where that message's `content` is built from a variable or interpolated string.
 - **Unvalidated Azure OpenAI output** (S02): flag any `JSON.parse(response.choices[0].message.content)` that is not immediately followed by Zod schema validation.
+- **Prototype pollution** (S21): `Object.assign(target, req.body/query/params)`, `_.merge()` with user data, dynamic property assignment `obj[req.body.key] = value`. CWE-1321.
+- **TLS verification disabled** (S22): `rejectUnauthorized: false`, `verify: false`, `strictSSL: false`, `NODE_TLS_REJECT_UNAUTHORIZED = '0'`, `ssl: false` in DB config. CWE-295.
+- **Weak crypto algorithms** (S23): `createHash('md5')`, `createHash('sha1')`, `createCipheriv('des', ...)`, any ECB mode cipher. CWE-327.
 
-Assign CWE numbers from: CWE-798 (secrets), CWE-89 (SQL injection), CWE-78 (command injection), CWE-330 (insecure random), CWE-327 (JWT), CWE-79 (XSS), CWE-22 (path traversal), CWE-77 (prompt injection).
+Assign CWE numbers from: CWE-798 (secrets), CWE-89 (SQL injection), CWE-78 (command injection), CWE-330 (insecure random), CWE-327 (JWT/weak crypto), CWE-79 (XSS), CWE-22 (path traversal), CWE-77 (prompt injection), CWE-1321 (prototype pollution), CWE-295 (TLS disabled).
 
 ## Output format
 

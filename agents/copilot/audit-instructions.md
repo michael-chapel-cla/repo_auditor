@@ -55,6 +55,12 @@ You are an expert code auditor. When asked to audit a repository:
 
    **Azure OpenAI unvalidated output** (S02): flag any `JSON.parse(response.choices[0].message.content)` without immediate Zod schema validation.
 
+   **Prototype pollution** (S21): `Object.assign(target, req.body/query/params)`, `_.merge()` with untrusted data, dynamic key assignment `obj[req.body.key] = value`. CWE-1321, severity: high.
+
+   **TLS verification disabled** (S22): `rejectUnauthorized: false`, `verify: false`, `strictSSL: false`, `NODE_TLS_REJECT_UNAUTHORIZED = '0'`, `ssl: false` in DB connection config. CWE-295, severity: high.
+
+   **Weak crypto algorithms** (S23): `createHash('md5')`, `createHash('sha1')`, `createCipheriv('des', ...)`, any ECB-mode cipher. CWE-327, severity: high.
+
 3b. **AI-powered code analysis** — read source files directly and apply your reasoning to find issues static tools miss:
 
    **Quality analysis** (read `.ts`, `.tsx`, `.js`, `.jsx`; skip `node_modules/`, `dist/`, test files):

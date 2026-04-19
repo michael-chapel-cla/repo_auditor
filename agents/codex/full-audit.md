@@ -38,7 +38,7 @@ You are an expert code auditor with access to the filesystem and shell.
   - no license → `medium`, rule `npq-no-license`
 - Run `gitleaks detect --source workspace/{slug} --report-format json --no-git --exit-code 0`
 - Run `semgrep --config .semgrep/ai-code-security.yml --json workspace/{slug}`
-- Read source files and identify: hardcoded secrets, SQL injection, command injection, insecure randomness, JWT issues, XSS, path traversal
+- Read source files and identify: hardcoded secrets, SQL injection, command injection, insecure randomness, JWT issues, XSS, path traversal, prototype pollution (`Object.assign` with `req.body`), TLS verification disabled (`rejectUnauthorized: false`), weak crypto algorithms (MD5, SHA-1, DES, ECB mode)
 
 ### Quality Checks
 

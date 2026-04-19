@@ -135,3 +135,78 @@ rules:
     message: Wildcard CORS origin allows any site to make credentialed requests. Restrict to specific origins in production.
     languages: [javascript, typescript]
     severity: WARNING
+
+  # Prototype pollution
+  - id: prototype-pollution-assign
+    patterns:
+      - pattern: Object.assign($TARGET, $REQ.body)
+      - pattern: Object.assign($TARGET, $REQ.query)
+      - pattern: Object.assign($TARGET, $REQ.params)
+    message: "Object.assign() with untrusted request data can cause prototype pollution. Validate and destructure only known keys first."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-1321"
+
+  - id: prototype-pollution-dynamic-key
+    pattern: |
+      $OBJ[$REQ.body.$KEY] = $VAL
+    message: "Dynamic property assignment from request data can cause prototype pollution (__proto__, constructor). Validate keys against an allowlist."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-1321"
+
+  # TLS verification disabled
+  - id: tls-reject-unauthorized-false
+    patterns:
+      - pattern: |
+          rejectUnauthorized: false
+      - pattern: |
+          rejectUnauthorized: 0
+      - pattern: |
+          strictSSL: false
+      - pattern: |
+          verify: false
+    message: "TLS certificate verification is disabled. This allows man-in-the-middle attacks. Never disable in production."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-295"
+
+  - id: node-tls-env-disabled
+    pattern: |
+      process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
+    message: "NODE_TLS_REJECT_UNAUTHORIZED=0 disables TLS verification for all HTTPS in this process. Remove before deploying."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-295"
+
+  # Weak cryptographic algorithms
+  - id: weak-hash-algorithm
+    patterns:
+      - pattern: createHash("md5")
+      - pattern: createHash("MD5")
+      - pattern: createHash("sha1")
+      - pattern: createHash("SHA1")
+      - pattern: createHash("sha-1")
+    message: "MD5 and SHA-1 are cryptographically broken. Use SHA-256 or SHA-384 for integrity, Argon2id for passwords."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-327"
+
+  - id: weak-cipher-algorithm
+    patterns:
+      - pattern: createCipheriv("des", ...)
+      - pattern: createCipheriv("des-ede", ...)
+      - pattern: createCipheriv("des-ede3", ...)
+      - pattern: createCipheriv("aes-128-ecb", ...)
+      - pattern: createCipheriv("aes-256-ecb", ...)
+      - pattern: createCipheriv("aes-192-ecb", ...)
+    message: "Weak or broken cipher algorithm. Use AES-256-GCM for symmetric encryption."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-327"
