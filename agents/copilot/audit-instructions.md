@@ -61,6 +61,20 @@ You are an expert code auditor. When asked to audit a repository:
 
    **Weak crypto algorithms** (S23): `createHash('md5')`, `createHash('sha1')`, `createCipheriv('des', ...)`, any ECB-mode cipher. CWE-327, severity: high.
 
+   **System prompt exfiltration** (S24): system prompt string constants containing API keys, internal URLs, DB schema, or business secrets — harmful if the model is prompted to repeat them. CWE-200, severity: high.
+
+   **RAG / retrieval injection** (S25): retrieved chunks or vector store results concatenated into the `system` role rather than placed as framed untrusted data in the `user` role. CWE-77, severity: critical.
+
+   **Agent tool-call hijacking** (S26): `response.tool_calls` / `function_call` arguments dispatched to `fs`, `exec`, HTTP, or DB without Zod validation and path/URL bounds checking. CWE-77, severity: critical.
+
+   **Context window flooding** (S27): file reads or HTTP bodies fed to LLM context without a token/character cap; missing "sandwich" pattern re-stating key constraints after long content. CWE-400, severity: high.
+
+   **Agent memory poisoning** (S28): memory store reads placed in the `system` role, or raw user input written to persistent memory without injection screening. CWE-77, severity: high.
+
+   **Second-order / output smuggling** (S29): `response.choices[0].message.content` used directly as `content` in a second LLM call without an intermediate schema parse. CWE-74, severity: critical.
+
+   **Multimodal injection** (S30): user-uploaded images/PDFs passed to a vision model without EXIF stripping, magic-byte file-type validation, and a low-privilege description step before agentic use. CWE-77, severity: high.
+
 3b. **AI-powered code analysis** — read source files directly and apply your reasoning to find issues static tools miss:
 
    **Quality analysis** (read `.ts`, `.tsx`, `.js`, `.jsx`; skip `node_modules/`, `dist/`, test files):

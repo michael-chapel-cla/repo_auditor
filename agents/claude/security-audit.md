@@ -124,8 +124,15 @@ For each file (or batch of small files), analyze for:
 - **Prototype pollution** (S21): `Object.assign(target, req.body/query/params)`, `_.merge()` with user data, dynamic property assignment `obj[req.body.key] = value`. CWE-1321.
 - **TLS verification disabled** (S22): `rejectUnauthorized: false`, `verify: false`, `strictSSL: false`, `NODE_TLS_REJECT_UNAUTHORIZED = '0'`, `ssl: false` in DB config. CWE-295.
 - **Weak crypto algorithms** (S23): `createHash('md5')`, `createHash('sha1')`, `createCipheriv('des', ...)`, any ECB mode cipher. CWE-327.
+- **System prompt exfiltration** (S24): system prompt constants that contain API keys, internal URLs, DB schema details, or business logic secrets that would be harmful if leaked. CWE-200.
+- **RAG / retrieval injection** (S25): retrieved document chunks or vector store results concatenated directly into the `system` role message rather than framed as untrusted data in the `user` role. CWE-77.
+- **Agent tool-call hijacking** (S26): tool-call arguments from `response.tool_calls` or `function_call` used in `fs`, `exec`, HTTP, or DB calls without Zod schema validation and path/URL bounds checking first. CWE-77.
+- **Context window flooding** (S27): file reads or HTTP response bodies fed to LLM context without a `MAX_CONTENT_CHARS` / token cap; no "sandwich" pattern re-stating constraints after long content. CWE-400.
+- **Agent memory poisoning** (S28): memory store reads placed in the `system` role, or raw user input written to persistent memory without injection screening. CWE-77.
+- **Second-order / output smuggling** (S29): `response.choices[0].message.content` used directly as the `content` of a `user` message in a second LLM call without schema parsing in between. CWE-74.
+- **Multimodal injection** (S30): user-uploaded images/PDFs passed directly to a vision model without EXIF stripping (`sharp`/`exiftool`), file-type validation (magic bytes), and a low-privilege description step before any agentic use. CWE-77.
 
-Assign CWE numbers from: CWE-798 (secrets), CWE-89 (SQL injection), CWE-78 (command injection), CWE-330 (insecure random), CWE-327 (JWT/weak crypto), CWE-79 (XSS), CWE-22 (path traversal), CWE-77 (prompt injection), CWE-1321 (prototype pollution), CWE-295 (TLS disabled).
+Assign CWE numbers from: CWE-798 (secrets), CWE-89 (SQL injection), CWE-78 (command injection), CWE-330 (insecure random), CWE-327 (JWT/weak crypto), CWE-79 (XSS), CWE-22 (path traversal), CWE-77 (prompt injection), CWE-1321 (prototype pollution), CWE-295 (TLS disabled), CWE-200 (system prompt leakage), CWE-400 (context flooding), CWE-74 (output smuggling).
 
 ## Output format
 

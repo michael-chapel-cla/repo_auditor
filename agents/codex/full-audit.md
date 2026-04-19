@@ -39,6 +39,7 @@ You are an expert code auditor with access to the filesystem and shell.
 - Run `gitleaks detect --source workspace/{slug} --report-format json --no-git --exit-code 0`
 - Run `semgrep --config .semgrep/ai-code-security.yml --json workspace/{slug}`
 - Read source files and identify: hardcoded secrets, SQL injection, command injection, insecure randomness, JWT issues, XSS, path traversal, prototype pollution (`Object.assign` with `req.body`), TLS verification disabled (`rejectUnauthorized: false`), weak crypto algorithms (MD5, SHA-1, DES, ECB mode)
+- For LLM integration code also check: secrets in system prompt constants (S24), retrieved/RAG content placed in `system` role (S25), tool-call arguments used without schema validation (S26), unbounded file reads fed to context with no length cap (S27), raw user input written to agent memory stores (S28), LLM output piped directly into a second LLM call without schema parse (S29), user-uploaded files passed to vision model without EXIF stripping and type validation (S30)
 
 ### Quality Checks
 

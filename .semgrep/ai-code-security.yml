@@ -210,3 +210,66 @@ rules:
     severity: ERROR
     metadata:
       cwe: "CWE-327"
+
+  # S25 — RAG content in system role (retrieval document injection)
+  - id: rag-content-in-system-role
+    patterns:
+      - pattern: |
+          { role: "system", content: $PROMPT + $CHUNKS }
+      - pattern: |
+          { role: "system", content: `...${ $CHUNKS }...` }
+    message: "Retrieved/external content concatenated into the system role message enables RAG injection. Place retrieved content in the user role with explicit untrusted framing."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-77"
+
+  # S26 — tool-call arguments used without schema validation
+  - id: tool-call-args-no-validation
+    patterns:
+      - pattern: |
+          JSON.parse($CALL.function.arguments)
+      - pattern: |
+          JSON.parse($CALL.arguments)
+    message: "Tool-call arguments parsed without schema validation. An injected instruction could supply malicious arguments. Validate with Zod before use."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-77"
+
+  # S27 — unbounded file/fetch content fed to LLM without length cap
+  - id: llm-context-no-length-cap
+    patterns:
+      - pattern: |
+          { role: $ROLE, content: fs.readFileSync($PATH, ...) }
+      - pattern: |
+          { role: $ROLE, content: await $RES.text() }
+    message: "Unbounded file or HTTP response content fed directly to LLM context. Apply a MAX_CONTENT_CHARS cap to prevent context window flooding."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-400"
+
+  # S29 — raw LLM output fed as input to second LLM call
+  - id: llm-output-to-llm-input
+    patterns:
+      - pattern: |
+          { role: "user", content: $RESP.choices[0].message.content }
+      - pattern: |
+          { role: "user", content: $RESP.choices[0].message.content ?? $DEFAULT }
+    message: "Raw LLM output passed as input to a second LLM call (second-order injection). Parse and validate the first model's output with a schema before using it as context."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-74"
+
+  # S30 — user-uploaded file passed directly to multimodal model without EXIF stripping
+  - id: multimodal-upload-no-sanitize
+    patterns:
+      - pattern: |
+          { type: "image_url", image_url: { url: `data:${ ... };base64,${ $BUFFER.toString("base64") }` } }
+    message: "User-uploaded file passed directly to vision model. Strip EXIF metadata with sharp/exiftool and validate file type before passing to a multimodal model."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-77"
