@@ -146,7 +146,7 @@ You are an expert code auditor. When asked to audit a repository:
    ```json
    {
      "repoFullName": "owner/repo",
-     "generatedAt": "<ISO timestamp>",
+     "generatedAt": "2026-04-20T14:23:15Z",
      "contributors": [
        {
          "email": "...",
@@ -169,6 +169,10 @@ You are an expert code auditor. When asked to audit a repository:
 
 5. **Write output** to `reports/{owner}_{repo}/{run-id}/`:
    - `results.json` — following schema in `scripts/report-schema.json`; include `npm` and `npq` as separate categories in `results[]`
+     **IMPORTANT**: Use actual timestamps captured at runtime:
+     - `"startedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` at the beginning of the audit (before cloning)
+     - `"completedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` when writing final results (Step 5)
+     - `"agentTool": "copilot"`
    - `npm-audit.json` — raw unmodified output of `npm audit --json` (preserved for UI display)
    - `npq-raw.json` — raw npq marshal output
    - `contributors.json` — contributor stats (see step 4)

@@ -122,7 +122,12 @@ npm run dev:frontend      # start Vite dev server on :5173
 
 All agents MUST write output matching `scripts/report-schema.json`. Key fields:
 
-- `auditId` (UUID), `repoFullName`, `status`, `startedAt`, `agentTool`
+- `auditId` (UUID), `repoFullName`, `status`, `startedAt`, `completedAt`, `agentTool`
 - `summary.overallScore` (0-100), `summary.riskLevel`, `summary.bySeverity`, `summary.byCategory`
 - `results[]` — one per category with `score`, `status`, `findings[]`
 - `findings[]` — each with `id`, `category`, `severity`, `title`, `description`, `file`, `line`, `rule`, `cwe`, `fix`, `source`
+
+**IMPORTANT — Timestamps**: `startedAt` and `completedAt` MUST use actual runtime timestamps in ISO 8601 format with time component:
+
+- ✅ `"2026-04-20T14:23:15Z"` (captured with `date -u +"%Y-%m-%dT%H:%M:%SZ"`)
+- ❌ `"2026-04-20T00:00:00Z"` (midnight placeholder — causes all audits to display at same time when converted to local timezone)

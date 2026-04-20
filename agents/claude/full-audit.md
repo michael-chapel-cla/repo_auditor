@@ -20,7 +20,7 @@ Set:
 
 - `REPO_SLUG` = `owner_repo` (slash replaced with underscore)
 - `AUDIT_ID` = generate with `python3 -c "import uuid; print(uuid.uuid4())"`
-- `AUDIT_TS` = `date -u +"%Y-%m-%dT%H:%M:%SZ"`
+- `AUDIT_START_TS` = `date -u +"%Y-%m-%dT%H:%M:%SZ"` — **capture this immediately when the audit starts**
 - `OUT_DIR` = `reports/$REPO_SLUG/$AUDIT_ID`
 - `WORKSPACE` = the local checkout path (default: `workspace/$REPO_SLUG`)
 
@@ -66,6 +66,13 @@ After all sub-agents complete, read each category's output JSON from `$OUT_DIR/`
 - `contributors.json`
 
 Merge into a single `results.json` matching the schema in `scripts/report-schema.json`. The `npm` and `npq` categories each appear as their own entries in `results[]` alongside security/quality/api/db.
+
+**IMPORTANT**: Use the actual timestamps captured at audit start and completion:
+
+- `"startedAt": "$AUDIT_START_TS"` — use the timestamp captured in Step 1
+- `"completedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` at this step (when merging completes)
+- `"auditId": "$AUDIT_ID"`
+- `"agentTool": "claude"`
 
 Calculate `summary`:
 

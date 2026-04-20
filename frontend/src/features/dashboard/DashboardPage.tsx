@@ -148,7 +148,9 @@ function RepoCard({ item }: { item: AuditListItem }) {
                 {item.repoFullName}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {new Date(item.startedAt).toLocaleDateString()}
+                {new Date(
+                  item.completedAt ?? item.startedAt,
+                ).toLocaleDateString()}
                 {item.agentTool ? ` · ${item.agentTool}` : ""}
               </Typography>
             </Box>

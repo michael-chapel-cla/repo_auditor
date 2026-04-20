@@ -15,8 +15,18 @@
     "auditId": { "type": "string", "format": "uuid" },
     "repoFullName": { "type": "string", "example": "owner/repo" },
     "status": { "type": "string", "enum": ["running", "complete", "error"] },
-    "startedAt": { "type": "string", "format": "date-time" },
-    "completedAt": { "type": "string", "format": "date-time" },
+    "startedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp with time component (not midnight placeholder). Capture with: date -u +\"%Y-%m-%dT%H:%M:%SZ\"",
+      "example": "2026-04-20T14:23:15Z"
+    },
+    "completedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp with time component (not midnight placeholder). Capture with: date -u +\"%Y-%m-%dT%H:%M:%SZ\"",
+      "example": "2026-04-20T14:45:32Z"
+    },
     "agentTool": {
       "type": "string",
       "enum": ["claude", "codex", "copilot"],

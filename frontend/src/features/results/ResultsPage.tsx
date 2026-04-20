@@ -109,7 +109,8 @@ export default function ResultsPage() {
     if (!paramAuditId && allResults.length > 0 && !selectedAuditId) {
       const sorted = [...allResults].sort(
         (a, b) =>
-          new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
+          new Date(b.completedAt ?? b.startedAt).getTime() -
+          new Date(a.completedAt ?? a.startedAt).getTime(),
       );
       const latest = sorted[0].auditId;
       setSelectedAuditId(latest);
@@ -160,12 +161,13 @@ export default function ResultsPage() {
             {[...allResults]
               .sort(
                 (a, b) =>
-                  new Date(b.startedAt).getTime() -
-                  new Date(a.startedAt).getTime(),
+                  new Date(b.completedAt ?? b.startedAt).getTime() -
+                  new Date(a.completedAt ?? a.startedAt).getTime(),
               )
               .map((r) => (
                 <MenuItem key={r.auditId} value={r.auditId}>
-                  {r.repoFullName} — {new Date(r.startedAt).toLocaleString()}
+                  {r.repoFullName} —{" "}
+                  {new Date(r.completedAt ?? r.startedAt).toLocaleString()}
                 </MenuItem>
               ))}
           </Select>
@@ -187,7 +189,9 @@ export default function ResultsPage() {
               </Typography>
               <Typography color="text.secondary">
                 Audit {result.auditId.slice(0, 8)} —{" "}
-                {new Date(result.startedAt).toLocaleString()}
+                {new Date(
+                  result.completedAt ?? result.startedAt,
+                ).toLocaleString()}
               </Typography>
             </Box>
             <Box sx={{ display: "flex", gap: 1 }}>

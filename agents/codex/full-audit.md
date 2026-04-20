@@ -111,6 +111,10 @@ Read migration `.sql` files and ORM/repository source files. Analyze for:
 
 5. Write all results to `reports/{slug}/{uuid}/` as:
    - `results.json` — structured findings following `scripts/report-schema.json`; include `npm` and `npq` as separate categories in `results[]`
+     **IMPORTANT**: Use actual timestamps captured at runtime:
+     - `"startedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` when the audit begins (before cloning)
+     - `"completedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` when merging results (Step 5)
+     - `"agentTool": "codex"`
    - `npm-audit.json` — raw unmodified output of `npm audit --json`
    - `npq-raw.json` — raw npq marshal output
    - `report.md` — human-readable markdown report

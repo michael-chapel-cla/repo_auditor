@@ -66,6 +66,7 @@ const server = createServer(async (req, res) => {
             const data = JSON.parse(raw) as {
               repoFullName?: string;
               startedAt?: string;
+              completedAt?: string;
               summary?: unknown;
               agentTool?: string;
             };
@@ -73,6 +74,7 @@ const server = createServer(async (req, res) => {
               auditId,
               repoFullName: data.repoFullName,
               startedAt: data.startedAt,
+              completedAt: data.completedAt,
               summary: data.summary,
               agentTool: data.agentTool,
             });
@@ -134,11 +136,12 @@ const server = createServer(async (req, res) => {
               const d = JSON.parse(raw) as {
                 repoFullName?: string;
                 startedAt?: string;
+                completedAt?: string;
                 agentTool?: string;
                 contributors?: unknown[];
               };
               repoFullName = repoFullName ?? d.repoFullName;
-              startedAt = d.startedAt;
+              startedAt = d.completedAt ?? d.startedAt;
               agentTool = d.agentTool;
               if (!hasData && (d.contributors?.length ?? 0) > 0) hasData = true;
             }

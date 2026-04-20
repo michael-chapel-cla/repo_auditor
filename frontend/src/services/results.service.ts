@@ -44,6 +44,7 @@ export interface AuditListItem {
   auditId: string;
   repoFullName: string;
   startedAt: string;
+  completedAt?: string;
   agentTool?: string;
   summary: AuditSummary;
 }
