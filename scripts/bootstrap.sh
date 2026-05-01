@@ -48,7 +48,7 @@ if ! command -v gitleaks &>/dev/null; then
   esac
   curl -sSfL \
     "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_${GITLEAKS_ARCH}.tar.gz" \
-    | tar -xz -C /usr/local/bin gitleaks 2>/dev/null \
+    | sudo tar -xz -C /usr/local/bin gitleaks 2>/dev/null \
     || echo "    gitleaks install skipped (check permissions)"
 else
   echo "    gitleaks already installed: $(gitleaks version 2>/dev/null || echo 'ok')"
@@ -61,11 +61,11 @@ if ! command -v flyway &>/dev/null; then
   FLYWAY_DIR="/opt/flyway-${FLYWAY_VERSION}"
   if [ ! -d "$FLYWAY_DIR" ]; then
     curl -sSfL \
-      "https://github.com/flyway/flyway/releases/download/flyway-${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz" \
-      | tar -xz -C /opt/ 2>/dev/null \
+      "https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz" \
+      | sudo tar -xz -C /opt/ 2>/dev/null \
       || { echo "    Flyway install skipped"; }
     if [ -d "$FLYWAY_DIR" ]; then
-      ln -sf "${FLYWAY_DIR}/flyway" /usr/local/bin/flyway
+      sudo ln -sf "${FLYWAY_DIR}/flyway" /usr/local/bin/flyway
     fi
   fi
 else
