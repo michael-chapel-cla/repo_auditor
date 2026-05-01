@@ -4,7 +4,6 @@ dist/
 .audit-env
 reports/*/
 !reports/.gitkeep
-coverage/
 *.log
 .DS_Store
 tmp/
