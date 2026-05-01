@@ -270,6 +270,102 @@ const SECURITY_RULES: VectorRule[] = [
     source: "AI/LLM",
   },
   {
+    id: "S32",
+    rule: "Server-Side Request Forgery (SSRF)",
+    severity: "CRITICAL",
+    cwe: "CWE-918",
+    cweLabel: "Server-Side Request Forgery",
+    source: "Network",
+  },
+  {
+    id: "S33",
+    rule: "Server-Side Template Injection (SSTI)",
+    severity: "HIGH",
+    cwe: "CWE-1336",
+    cweLabel: "Improper Neutralization of Template Expressions",
+    source: "Templates",
+  },
+  {
+    id: "S34",
+    rule: "Open Redirect (URL Redirection)",
+    severity: "HIGH",
+    cwe: "CWE-601",
+    cweLabel: "URL Redirection to Untrusted Site",
+    source: "Redirect",
+  },
+  {
+    id: "S35",
+    rule: "XML External Entity (XXE) Injection",
+    severity: "HIGH",
+    cwe: "CWE-611",
+    cweLabel: "XML External Entity Injection",
+    source: "XML",
+  },
+  {
+    id: "S36",
+    rule: "Deserialization of Untrusted Data",
+    severity: "HIGH",
+    cwe: "CWE-502",
+    cweLabel: "Deserialization of Untrusted Data",
+    source: "Serialization",
+  },
+  {
+    id: "S37",
+    rule: "Unrestricted File Upload",
+    severity: "HIGH",
+    cwe: "CWE-434",
+    cweLabel: "Unrestricted Upload of File with Dangerous Type",
+    source: "Upload",
+  },
+  {
+    id: "S38",
+    rule: "DoS via Resource Consumption",
+    severity: "HIGH",
+    cwe: "CWE-400",
+    cweLabel: "Uncontrolled Resource Consumption",
+    source: "DoS",
+  },
+  {
+    id: "S39",
+    rule: "Mass Assignment / Object Prototype",
+    severity: "HIGH",
+    cwe: "CWE-915",
+    cweLabel: "Improperly Controlled Modification of Object Prototype",
+    source: "Assignment",
+  },
+  {
+    id: "S40",
+    rule: "Cleartext Storage of Sensitive Information",
+    severity: "HIGH",
+    cwe: "CWE-312",
+    cweLabel: "Cleartext Storage of Sensitive Information",
+    source: "Storage",
+  },
+  {
+    id: "S41",
+    rule: "Cleartext Transmission of Sensitive Information",
+    severity: "HIGH",
+    cwe: "CWE-319",
+    cweLabel: "Cleartext Transmission of Sensitive Information",
+    source: "Transmission",
+  },
+  {
+    id: "S42",
+    rule: "Improper Input Validation (general)",
+    severity: "HIGH",
+    cwe: "CWE-20",
+    cweLabel: "Improper Input Validation",
+    source: "Validation",
+  },
+  {
+    id: "S43",
+    rule: "Improper Authorization (RBAC gaps)",
+    severity: "HIGH",
+    cwe: "CWE-285",
+    cweLabel: "Improper Authorization",
+    source: "Authorization",
+  },
+  {
     id: "S16",
     rule: "Missing rate limiting on API server",
     severity: "MEDIUM",
@@ -729,46 +825,6 @@ const DB_RULES: VectorRule[] = [
 
 const ROADMAP_ITEMS: RoadmapEntry[] = [
   {
-    cwe: "CWE-601",
-    label: "URL Redirection to Untrusted Site (Open Redirect)",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "Common in OAuth callback handlers and redirect-after-login patterns. Not yet detected.",
-  },
-  {
-    cwe: "CWE-918",
-    label: "Server-Side Request Forgery (SSRF)",
-    category: "Security",
-    severity: "CRITICAL",
-    rationale:
-      "AI agents fetch URLs from repo content — SSRF is a first-class threat in agentic pipelines.",
-  },
-  {
-    cwe: "CWE-611",
-    label: "XML External Entity (XXE) Injection",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "XML parsers in Node.js audit tooling can expose internal files if XXE not disabled.",
-  },
-  {
-    cwe: "CWE-502",
-    label: "Deserialization of Untrusted Data",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "JSON.parse from external sources without schema validation is detected, but binary deserialization (e.g. node-serialize) is not.",
-  },
-  {
-    cwe: "CWE-434",
-    label: "Unrestricted Upload of File with Dangerous Type",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "Audit agents may process uploaded files; extension/MIME type validation not currently checked.",
-  },
-  {
     cwe: "CWE-307",
     label: "Improper Restriction of Excessive Auth Attempts",
     category: "Security",
@@ -809,54 +865,6 @@ const ROADMAP_ITEMS: RoadmapEntry[] = [
       "Encoding for non-HTML contexts (SQL, shell, URL, LDAP) beyond current XSS detection.",
   },
   {
-    cwe: "CWE-400",
-    label: "Uncontrolled Resource Consumption (general)",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "S27 detects LLM context flooding, but general CPU/memory/disk DoS patterns (e.g. regex DoS, zip bomb) not yet covered.",
-  },
-  {
-    cwe: "CWE-915",
-    label: "Improperly Controlled Modification of Object Prototype",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "Broader mass-assignment patterns beyond the prototype pollution check in S21.",
-  },
-  {
-    cwe: "CWE-312",
-    label: "Cleartext Storage of Sensitive Information",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "Secrets written to local files, caches, or IndexedDB in plaintext not yet audited.",
-  },
-  {
-    cwe: "CWE-319",
-    label: "Cleartext Transmission of Sensitive Information",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "HTTP (not HTTPS) endpoints in server configs not yet explicitly flagged.",
-  },
-  {
-    cwe: "CWE-20",
-    label: "Improper Input Validation (general)",
-    category: "API",
-    severity: "HIGH",
-    rationale:
-      "A21 covers request bodies, but query-param and path-param depth/regex validation not fully scanned.",
-  },
-  {
-    cwe: "CWE-285",
-    label: "Improper Authorization (RBAC gaps)",
-    category: "API",
-    severity: "HIGH",
-    rationale:
-      "Role-based access control verification beyond auth middleware presence not yet checked.",
-  },
-  {
     cwe: "CWE-362",
     label: "Race Condition (TOCTOU)",
     category: "Quality",
@@ -887,14 +895,6 @@ const ROADMAP_ITEMS: RoadmapEntry[] = [
     severity: "MEDIUM",
     rationale:
       "Concurrent migration execution without advisory locks not yet detected.",
-  },
-  {
-    cwe: "CWE-1336",
-    label: "Improper Neutralization of Template Expressions (SSTI)",
-    category: "Security",
-    severity: "HIGH",
-    rationale:
-      "Server-side template injection in Handlebars/EJS/Nunjucks not yet included in injection checks.",
   },
 ];
 

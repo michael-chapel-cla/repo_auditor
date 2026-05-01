@@ -68,7 +68,7 @@ rules:
   - id: jwt-no-algorithm
     pattern: |
       jwt.verify($TOKEN, $SECRET)
-    message: jwt.verify() called without explicit algorithms option. Add { algorithms: ['RS256'] } to prevent algorithm confusion attacks.
+    message: "jwt.verify() called without explicit algorithms option. Add { algorithms: ['RS256'] } to prevent algorithm confusion attacks."
     languages: [javascript, typescript]
     severity: ERROR
 
@@ -273,3 +273,316 @@ rules:
     severity: WARNING
     metadata:
       cwe: "CWE-1427"
+
+  # S32 — Server-Side Request Forgery (SSRF)
+  - id: ssrf-user-controlled-url
+    patterns:
+      - pattern: |
+          fetch($REQ.body.$FIELD)
+      - pattern: |
+          fetch($REQ.query.$FIELD)
+      - pattern: |
+          fetch($REQ.params.$FIELD)
+      - pattern: |
+          axios.get($REQ.body.$FIELD)
+      - pattern: |
+          axios.get($REQ.query.$FIELD)
+      - pattern: |
+          axios.get($REQ.params.$FIELD)
+      - pattern: |
+          fetch(`${ $REQ.body.$FIELD }`)
+      - pattern: |
+          fetch(`${ $REQ.query.$FIELD }`)
+    message: "Server-Side Request Forgery (SSRF) vulnerability: HTTP request to user-controlled URL. Validate against allowlist of permitted domains."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-918"
+
+  - id: ssrf-dynamic-url-construction
+    patterns:
+      - pattern: |
+          fetch(`https://${ $VAR }`)
+      - pattern: |
+          fetch("https://" + $VAR)
+      - pattern: |
+          axios.get(`https://${ $VAR }`)
+      - pattern: |
+          axios.get("https://" + $VAR)
+    message: "Potential SSRF: Dynamic URL construction. Ensure the variable is validated against an allowlist of permitted domains."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-918"
+
+  - id: ssrf-env-var-url
+    patterns:
+      - pattern: |
+          fetch(process.env.$VAR)
+      - pattern: |
+          axios.get(process.env.$VAR)
+      - pattern: |
+          got(process.env.$VAR)
+    message: "HTTP request to URL from environment variable. Validate the URL against an allowlist to prevent SSRF."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-918"
+
+  # S33 — Server-Side Template Injection (SSTI)
+  - id: ssti-user-controlled-template
+    patterns:
+      - pattern: |
+          Handlebars.compile($REQ.body.$FIELD)
+      - pattern: |
+          ejs.render($REQ.body.$FIELD)
+      - pattern: |
+          nunjucks.render($REQ.body.$FIELD)
+      - pattern: |
+          $TEMPLATE.compile($REQ.params.$FIELD)
+      - pattern: |
+          $TEMPLATE.render($REQ.query.$FIELD)
+    message: "Server-Side Template Injection (SSTI): User input directly compiled as template. Use predefined templates with validated data."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-1336"
+
+  - id: ssti-dynamic-template-string
+    patterns:
+      - pattern: |
+          Handlebars.compile(`${ ... }`)
+      - pattern: |
+          ejs.render(`${ ... }`)
+      - pattern: |
+          `{{ ${ $VAR } }}`
+    message: "Potential SSTI: Dynamic template string construction. Ensure user data is sanitized and use predefined template patterns."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-1336"
+
+  - id: ssti-unsafe-template-options
+    patterns:
+      - pattern: |
+          allowProtoMethodsByDefault: true
+      - pattern: |
+          allowProtoPropertiesByDefault: true
+    message: "Unsafe template engine configuration: Prototype access enabled. This can lead to prototype pollution attacks."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-1336"
+
+  # S34 — Open Redirect (URL Redirection)
+  - id: open-redirect-user-controlled
+    patterns:
+      - pattern: |
+          res.redirect($REQ.query.$FIELD)
+      - pattern: |
+          res.redirect($REQ.body.$FIELD)
+      - pattern: |
+          res.redirect($REQ.params.$FIELD)
+      - pattern: |
+          response.redirect($REQ.query.$FIELD)
+      - pattern: |
+          $RES.setHeader("Location", $REQ.query.$FIELD)
+    message: "Open Redirect vulnerability: User-controlled URL in redirect. Validate against an allowlist of permitted domains."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-601"
+
+  - id: open-redirect-oauth-callback
+    patterns:
+      - pattern: |
+          res.redirect($REQ.query.state)
+      - pattern: |
+          res.redirect($REQ.query.redirect_uri)
+      - pattern: |
+          res.redirect($REQ.query.return_url)
+      - pattern: |
+          res.redirect($REQ.query.next)
+    message: "Potential Open Redirect in OAuth/auth flow: Callback URL not validated. Ensure redirect URLs are on allowlisted domains."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-601"
+
+  - id: open-redirect-client-side
+    patterns:
+      - pattern: |
+          window.location = $REQ.query.$FIELD
+      - pattern: |
+          location.href = $REQ.query.$FIELD
+      - pattern: |
+          document.location = $REQ.query.$FIELD
+    message: "Client-side Open Redirect: User-controlled URL assigned to location. Validate the URL before redirecting."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-601"
+
+  # S35 — XML External Entity (XXE) Injection
+  - id: xxe-xml2js-unsafe
+    patterns:
+      - pattern: |
+          xml2js.parseString($REQ.body.$FIELD, ...)
+      - pattern: |
+          xml2js.parseString($REQ.query.$FIELD, ...)
+      - pattern: |
+          $PARSER.parseString($REQ.body.xml, ...)
+    message: "XML External Entity (XXE) vulnerability: User XML parsed without XXE protection. Disable external entities in xml2js parser options."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-611"
+
+  - id: xxe-dom-parser-unsafe
+    patterns:
+      - pattern: |
+          new DOMParser().parseFromString($REQ.body.$FIELD, "text/xml")
+      - pattern: |
+          parseFromString($REQ.body.xml, "text/xml")
+      - pattern: |
+          $PARSER.parseFromString($USER_XML, "text/xml")
+    message: "XXE vulnerability: DOMParser processing user XML. DOMParser is vulnerable to XXE attacks. Use a safe XML parser with entities disabled."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-611"
+
+  - id: xxe-unsafe-parser-config
+    patterns:
+      - pattern: |
+          processEntities: true
+      - pattern: |
+          externalEntities: true
+      - pattern: |
+          allowXXE: true
+      - pattern: |
+          xmlEntities: true
+    message: "Unsafe XML parser configuration: External entity processing enabled. This allows XXE attacks. Set to false."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-611"
+
+  - id: xxe-libxml-unsafe
+    patterns:
+      - pattern: |
+          libxml.loadXmlDoc($REQ.body.$FIELD)
+      - pattern: |
+          libxml.parseXml($USER_INPUT)
+    message: "XXE vulnerability: libxml processing user input. Configure libxml to disable external entity resolution."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-611"
+
+  # S36 — Deserialization of Untrusted Data
+  - id: unsafe-deserialization-node-serialize
+    patterns:
+      - pattern: |
+          serialize.unserialize($REQ.body.$FIELD)
+      - pattern: |
+          serialize.unserialize($REQ.query.$FIELD)
+      - pattern: |
+          $SERIALIZER.unserialize($USER_INPUT)
+    message: "Unsafe deserialization: node-serialize can execute arbitrary code. Use JSON with schema validation instead."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-502"
+
+  - id: unsafe-deserialization-v8
+    patterns:
+      - pattern: |
+          v8.deserialize($REQ.body.$FIELD)
+      - pattern: |
+          v8.deserialize(Buffer.from($REQ.body.$FIELD, ...))
+    message: "Unsafe deserialization: v8.deserialize can execute arbitrary code. Use JSON for data exchange."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-502"
+
+  - id: eval-with-json
+    patterns:
+      - pattern: |
+          eval("(" + $REQ.body.$FIELD + ")")
+      - pattern: |
+          eval($REQ.body.json)
+      - pattern: |
+          Function($REQ.body.$FIELD)()
+    message: "Code injection via eval() with user JSON. Use JSON.parse() with validation instead."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-502"
+
+  - id: unsafe-json-reviver
+    patterns:
+      - pattern: |
+          JSON.parse($DATA, function($KEY, $VALUE) { if ($KEY === "__proto__") return $VALUE; })
+      - pattern: |
+          JSON.parse($DATA, ($KEY, $VALUE) => { if ($KEY === "__proto__") return $VALUE; })
+    message: "Unsafe JSON reviver allows prototype pollution. Block __proto__, constructor, and prototype keys."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-502"
+
+  # S37 — Unrestricted File Upload
+  - id: unrestricted-file-upload
+    patterns:
+      - pattern: |
+          multer({ dest: $DIR })
+      - pattern: |
+          multer()
+      - pattern: |
+          fs.writeFileSync($PATH, $REQ.body.$FIELD)
+    message: "Unrestricted file upload: No file type or size validation. Add fileFilter and limits to multer configuration."
+    languages: [javascript, typescript]
+    severity: ERROR
+    metadata:
+      cwe: "CWE-434"
+
+  # Additional rapid CWE implementations
+  - id: dos-regex-pattern
+    patterns:
+      - pattern: |
+          new RegExp($REQ.body.$FIELD)
+      - pattern: |
+          $STR.match($REQ.query.$FIELD)
+    message: "Potential ReDoS: User-controlled regex pattern can cause denial of service."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-400"
+
+  - id: cleartext-storage
+    patterns:
+      - pattern: |
+          fs.writeFileSync($PATH, $PASSWORD)
+      - pattern: |
+          localStorage.setItem($KEY, $PASSWORD)
+      - pattern: |
+          sessionStorage.setItem($KEY, $TOKEN)
+    message: "Cleartext storage of sensitive data. Encrypt before storing."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-312"
+
+  - id: http-transmission
+    patterns:
+      - pattern: |
+          "http://"
+      - pattern: |
+          protocol: "http"
+    message: "HTTP transmission in production. Use HTTPS for sensitive data."
+    languages: [javascript, typescript]
+    severity: WARNING
+    metadata:
+      cwe: "CWE-319"

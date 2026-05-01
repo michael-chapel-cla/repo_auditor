@@ -39,6 +39,18 @@
 | S29 | Second-order / output smuggling between LLM calls       | CRITICAL | CWE-1426 | AI/LLM       |
 | S30 | Multimodal injection via uploaded images or files       | HIGH     | CWE-1427 | AI/LLM       |
 | S31 | Over-privileged AI agent — excessive tool/scope access  | HIGH     | CWE-1434 | AI/LLM       |
+| S32 | Server-Side Request Forgery (SSRF)                      | CRITICAL | CWE-918  | Network      |
+| S33 | Server-Side Template Injection (SSTI)                   | HIGH     | CWE-1336 | Templates    |
+| S34 | Open Redirect (URL Redirection)                         | HIGH     | CWE-601  | Redirect     |
+| S35 | XML External Entity (XXE) Injection                     | HIGH     | CWE-611  | XML          |
+| S36 | Deserialization of Untrusted Data                       | HIGH     | CWE-502  | Serialization|
+| S37 | Unrestricted File Upload                                | HIGH     | CWE-434  | Upload       |
+| S38 | DoS via Resource Consumption                             | HIGH     | CWE-400  | DoS          |
+| S39 | Mass Assignment / Object Prototype                      | HIGH     | CWE-915  | Assignment   |
+| S40 | Cleartext Storage of Sensitive Information              | HIGH     | CWE-312  | Storage      |
+| S41 | Cleartext Transmission of Sensitive Information         | HIGH     | CWE-319  | Transmission |
+| S42 | Improper Input Validation (general)                     | HIGH     | CWE-20   | Validation   |
+| S43 | Improper Authorization (RBAC gaps)                      | HIGH     | CWE-285  | Authorization|
 
 ---
 
@@ -1464,6 +1476,707 @@ INJECTION_PATTERNS = [
     r"as\s+an?\s+AI\s+without\s+restrictions",
     r"DAN\s+mode",
 ]
+```
+
+---
+
+## S32 — Server-Side Request Forgery (SSRF)
+
+**Severity**: CRITICAL | **CWE**: CWE-918 (Server-Side Request Forgery)
+
+Server-Side Request Forgery occurs when an application makes HTTP requests to attacker-controlled URLs, potentially accessing internal services, cloud metadata endpoints, or arbitrary external resources. This is especially critical for AI agents that fetch URLs from repository content or user input.
+
+### Detect
+
+```bash
+# Find HTTP requests with user-controlled URLs
+grep -rn 'fetch\|axios\|http\.get\|http\.request\|https\.get\|got\|needle\|superagent' \
+  "$WORKSPACE" --include='*.ts' --include='*.js' -A5 -B2 | \
+  grep -E 'req\.|params\.|query\.|body\.|process\.env|config\.'
+
+# Find dynamic URL construction
+grep -rn '\${.*url\|url.*=.*req\|"https?://" \+ \|`https?://\${' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+
+# AI agents fetching from repo content
+grep -rn 'fetch.*github\|http.*repo\|url.*clone\|webhook.*url' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+```
+
+Look for:
+
+- HTTP client calls with URLs derived from request parameters, environment variables, or file content
+- Dynamic URL construction with string concatenation or template literals
+- AI agents that fetch URLs mentioned in repository content without validation
+- Webhook endpoints that accept callback URLs
+- Proxy or redirect functionality that doesn't validate destination domains
+
+### ❌ NEVER
+
+```typescript
+// ❌ — Direct user input into fetch URL
+app.post('/proxy', async (req, res) => {
+  const data = await fetch(req.body.url);  // SSRF vulnerability
+  res.json(await data.json());
+});
+
+// ❌ — AI agent fetching URLs from repo without validation
+async function analyzeRepo(repoContent: string) {
+  const urls = repoContent.match(/https?:\/\/[^\s]+/g);
+  for (const url of urls) {
+    await fetch(url);  // SSRF: arbitrary URLs from repo
+  }
+}
+
+// ❌ — Environment variable URL without validation
+const webhookUrl = process.env.WEBHOOK_URL;
+await fetch(webhookUrl);  // Could be internal service
+```
+
+### ✅ SAFE
+
+```typescript
+// ✅ — URL validation with allowlist
+const ALLOWED_DOMAINS = ['api.github.com', 'api.stripe.com'];
+function validateUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_DOMAINS.includes(parsed.hostname) && 
+           parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+// ✅ — AI agent with URL filtering
+async function analyzeRepo(repoContent: string) {
+  const urls = repoContent.match(/https?:\/\/[^\s]+/g) || [];
+  const safeUrls = urls.filter(validateUrl);
+  for (const url of safeUrls) {
+    await fetch(url);  // Only allowed domains
+  }
+}
+
+// ✅ — Proxy with destination validation
+app.post('/proxy', async (req, res) => {
+  if (!validateUrl(req.body.url)) {
+    return res.status(400).json({ error: 'Invalid URL' });
+  }
+  const data = await fetch(req.body.url, { timeout: 5000 });
+  res.json(await data.json());
+});
+```
+
+---
+
+## S33 — Server-Side Template Injection (SSTI)
+
+**Severity**: HIGH | **CWE**: CWE-1336 (Improper Neutralization of Template Expressions)
+
+Server-Side Template Injection occurs when user input is directly embedded into template engines (Handlebars, EJS, Nunjucks, Pug) without proper escaping or validation. Attackers can execute arbitrary code or access server-side objects and functions through template expressions.
+
+### Detect
+
+```bash
+# Find template rendering with user input
+grep -rn '\.render\|\.compile\|new Handlebars\|ejs\.render\|nunjucks\.render' \
+  "$WORKSPACE" --include='*.ts' --include='*.js' -A3 -B2 | \
+  grep -E 'req\.|params\.|query\.|body\.'
+
+# Find template string interpolation with user data
+grep -rn 'template.*\${\|render.*\${\|compile.*\${' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+
+# Check for unsafe template options
+grep -rn 'allowProtoMethodsByDefault.*true\|allowProtoPropertiesByDefault.*true' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+```
+
+Look for:
+
+- Template rendering functions receiving user input without sanitization
+- Dynamic template compilation using user-controlled strings
+- Template engines configured with unsafe prototype access enabled
+- User data directly interpolated into template literals used for rendering
+
+### ❌ NEVER
+
+```javascript
+// ❌ — Direct user input into template compilation
+app.post('/render', (req, res) => {
+  const template = Handlebars.compile(req.body.template);
+  res.send(template({ user: req.user }));  // SSTI vulnerability
+});
+
+// ❌ — User input directly in template string
+app.get('/profile/:name', (req, res) => {
+  const template = `<h1>Welcome {{${req.params.name}}}</h1>`;
+  res.send(Handlebars.compile(template)({}));  // SSTI
+});
+
+// ❌ — Unsafe EJS configuration
+app.set('view engine', 'ejs');
+app.locals.settings = { 
+  'view options': { 
+    allowProtoMethodsByDefault: true  // Enables prototype pollution
+  }
+};
+```
+
+### ✅ SAFE
+
+```javascript
+// ✅ — Predefined templates with sanitized data
+const ALLOWED_TEMPLATES = {
+  welcome: '<h1>Welcome {{name}}</h1>',
+  profile: '<div>{{name}} - {{email}}</div>'
+};
+
+app.post('/render', (req, res) => {
+  const templateKey = req.body.template;
+  if (!ALLOWED_TEMPLATES[templateKey]) {
+    return res.status(400).json({ error: 'Invalid template' });
+  }
+  
+  const template = Handlebars.compile(ALLOWED_TEMPLATES[templateKey]);
+  const safeData = {
+    name: validator.escape(req.body.name),
+    email: validator.isEmail(req.body.email) ? req.body.email : ''
+  };
+  res.send(template(safeData));
+});
+
+// ✅ — Secure template configuration
+const handlebars = Handlebars.create();
+handlebars.registerHelper('safeString', (str) => {
+  return new handlebars.SafeString(validator.escape(str));
+});
+
+// ✅ — Input validation before template rendering
+const templateDataSchema = z.object({
+  name: z.string().max(50).regex(/^[a-zA-Z\s]+$/),
+  age: z.number().min(1).max(120)
+});
+
+app.post('/profile', (req, res) => {
+  const safeData = templateDataSchema.parse(req.body);
+  res.render('profile', safeData);  // Safe with validation
+});
+```
+
+---
+
+## S34 — Open Redirect (URL Redirection)
+
+**Severity**: HIGH | **CWE**: CWE-601 (URL Redirection to Untrusted Site)
+
+Open Redirect vulnerabilities occur when an application redirects users to URLs from untrusted sources without proper validation. Attackers can exploit this to redirect users to malicious sites for phishing attacks, often through legitimate-looking URLs that include the trusted domain.
+
+### Detect
+
+```bash
+# Find redirect operations with user-controlled URLs
+grep -rn 'redirect\|res\.redirect\|response\.redirect\|location.*=' \
+  "$WORKSPACE" --include='*.ts' --include='*.js' -A3 -B2 | \
+  grep -E 'req\.|params\.|query\.|body\.'
+
+# Find location header assignments
+grep -rn 'Location.*req\|location.*req\|setHeader.*Location' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+
+# OAuth callback and return URL patterns
+grep -rn 'callback.*url\|return.*url\|redirect.*uri\|next.*url' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+```
+
+Look for:
+
+- HTTP redirects using user-provided URLs from query parameters or request body
+- OAuth callback handlers that don't validate return URLs
+- Login/logout flows with redirect_uri or next parameters
+- Location headers set directly from user input
+- Client-side redirects using window.location with untrusted data
+
+### ❌ NEVER
+
+```javascript
+// ❌ — Direct user input to redirect
+app.get('/redirect', (req, res) => {
+  res.redirect(req.query.url);  // Open redirect vulnerability
+});
+
+// ❌ — OAuth callback without URL validation
+app.get('/oauth/callback', (req, res) => {
+  const returnUrl = req.query.state;
+  res.redirect(returnUrl);  // Attacker can redirect anywhere
+});
+
+// ❌ — Login redirect without domain check
+app.post('/login', (req, res) => {
+  if (isValidCredentials(req.body)) {
+    res.redirect(req.body.next);  // Open redirect
+  }
+});
+
+// ❌ — Client-side redirect with user data
+app.get('/profile', (req, res) => {
+  res.send(`<script>window.location = '${req.query.redirect}';</script>`);
+});
+```
+
+### ✅ SAFE
+
+```javascript
+// ✅ — URL validation with allowlist
+const ALLOWED_DOMAINS = ['myapp.com', 'api.myapp.com', 'admin.myapp.com'];
+function isValidRedirectUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_DOMAINS.includes(parsed.hostname) && 
+           (parsed.protocol === 'https:' || parsed.protocol === 'http:');
+  } catch {
+    return false;
+  }
+}
+
+// ✅ — Safe redirect with validation
+app.get('/redirect', (req, res) => {
+  const url = req.query.url;
+  if (!isValidRedirectUrl(url)) {
+    return res.status(400).json({ error: 'Invalid redirect URL' });
+  }
+  res.redirect(url);
+});
+
+// ✅ — OAuth with relative URL validation
+app.get('/oauth/callback', (req, res) => {
+  const returnUrl = req.query.state;
+  // Only allow relative URLs or validated absolute URLs
+  if (returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+    res.redirect(returnUrl);
+  } else if (isValidRedirectUrl(returnUrl)) {
+    res.redirect(returnUrl);
+  } else {
+    res.redirect('/dashboard');  // Safe default
+  }
+});
+
+// ✅ — Predefined redirect mapping
+const REDIRECT_CODES = {
+  'dashboard': '/user/dashboard',
+  'profile': '/user/profile', 
+  'settings': '/user/settings'
+};
+
+app.post('/login', (req, res) => {
+  if (isValidCredentials(req.body)) {
+    const redirectTo = REDIRECT_CODES[req.body.page] || '/dashboard';
+    res.redirect(redirectTo);
+  }
+});
+```
+
+---
+
+## S35 — XML External Entity (XXE) Injection
+
+**Severity**: HIGH | **CWE**: CWE-611 (XML External Entity Injection)
+
+XML External Entity injection occurs when XML parsers process user-controlled XML with external entity references enabled. Attackers can exploit this to read local files, access internal network services, or cause denial of service. This is particularly relevant for audit tools that parse XML configuration files or API responses.
+
+### Detect
+
+```bash
+# Find XML parsing operations
+grep -rn 'parseXml\|DOMParser\|libxml\|xml2js\|fast-xml-parser\|xmldom' \
+  "$WORKSPACE" --include='*.ts' --include='*.js' -A3 -B2
+
+# Check for XML parser configurations
+grep -rn 'loadExternalDTD\|noent\|resolveExternals\|externalEntities' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+
+# Find XML processing with user input
+grep -rn 'parseFromString.*req\|parse.*xml.*req\|parseXml.*body' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+```
+
+Look for:
+
+- XML parsers processing user-provided XML without XXE protection
+- XML parsing libraries with external entity resolution enabled
+- Configuration files or API endpoints that accept XML input
+- XML parsers used in audit tooling that process repository XML files
+
+### ❌ NEVER
+
+```javascript
+// ❌ — xml2js with default settings (XXE vulnerable)
+const xml2js = require('xml2js');
+app.post('/parse', (req, res) => {
+  xml2js.parseString(req.body.xml, (err, result) => {
+    res.json(result);  // XXE vulnerability
+  });
+});
+
+// ❌ — DOMParser processing user XML
+app.post('/xml', (req, res) => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(req.body.xml, 'text/xml');  // XXE
+  res.json({ root: doc.documentElement.tagName });
+});
+
+// ❌ — libxml with external entities enabled
+const libxml = require('libxml');
+app.post('/validate', (req, res) => {
+  libxml.loadXmlDoc(req.body.xml);  // XXE if external entities enabled
+});
+
+// ❌ — Unsafe XML configuration
+const parser = new XMLParser({
+  processEntities: true,  // Enables XXE
+  externalEntities: true
+});
+```
+
+### ✅ SAFE
+
+```javascript
+// ✅ — xml2js with XXE protection
+const xml2js = require('xml2js');
+const parser = new xml2js.Parser({
+  explicitRoot: true,
+  explicitArray: false,
+  xmlEntities: false,      // Disable entity processing
+  processEntities: false   // Disable XXE
+});
+
+app.post('/parse', (req, res) => {
+  if (!req.body.xml || typeof req.body.xml !== 'string') {
+    return res.status(400).json({ error: 'Invalid XML' });
+  }
+  
+  parser.parseString(req.body.xml, (err, result) => {
+    if (err) {
+      return res.status(400).json({ error: 'XML parse error' });
+    }
+    res.json(result);
+  });
+});
+
+// ✅ — Fast XML parser with safe configuration
+const { XMLParser } = require('fast-xml-parser');
+const parser = new XMLParser({
+  processEntities: false,    // Disable XXE
+  externalEntities: false,   // No external entity resolution
+  allowXXE: false           // Explicit XXE protection
+});
+
+app.post('/xml', (req, res) => {
+  try {
+    const result = parser.parse(req.body.xml);
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid XML' });
+  }
+});
+
+// ✅ — Input validation and size limits
+const MAX_XML_SIZE = 1024 * 1024;  // 1MB limit
+
+app.post('/process-xml', (req, res) => {
+  const xml = req.body.xml;
+  
+  if (!xml || typeof xml !== 'string') {
+    return res.status(400).json({ error: 'XML required' });
+  }
+  
+  if (xml.length > MAX_XML_SIZE) {
+    return res.status(413).json({ error: 'XML too large' });
+  }
+  
+  // Check for suspicious patterns
+  if (xml.includes('<!ENTITY') || xml.includes('<!DOCTYPE')) {
+    return res.status(400).json({ error: 'External entities not allowed' });
+  }
+  
+  // Safe parsing with disabled entities
+  const result = safeXmlParser.parse(xml);
+  res.json(result);
+});
+```
+
+---
+
+## S36 — Deserialization of Untrusted Data
+
+**Severity**: HIGH | **CWE**: CWE-502 (Deserialization of Untrusted Data)
+
+Deserialization vulnerabilities occur when applications deserialize user-controlled data without proper validation. While JSON.parse() is generally safe, binary serialization formats (node-serialize, v8-serialize, pickle) can lead to remote code execution. This is particularly dangerous in audit tools that process repository artifacts.
+
+### Detect
+
+```bash
+# Find binary serialization operations
+grep -rn 'node-serialize\|v8-serialize\|serialize-javascript\|\.unserialize\|\.deserialize' \
+  "$WORKSPACE" --include='*.ts' --include='*.js' -A3 -B2
+
+# Check for unsafe JSON parsing patterns
+grep -rn 'JSON\.parse.*req\|eval.*JSON\|Function.*JSON' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+
+# Find pickle/marshal usage (Python interop)
+grep -rn 'pickle\.loads\|marshal\.loads\|dill\.loads' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+```
+
+Look for:
+
+- Binary serialization libraries processing user input without validation
+- Dynamic code execution through deserialized objects
+- Unsafe JSON parsing with constructor/prototype manipulation
+- Python pickle files processed by Node.js audit tools
+- Session data deserialization without integrity checks
+
+### ❌ NEVER
+
+```javascript
+// ❌ — node-serialize with user data
+const serialize = require('node-serialize');
+app.post('/session', (req, res) => {
+  const sessionData = serialize.unserialize(req.body.data);  // RCE vulnerability
+  req.session = sessionData;
+});
+
+// ❌ — v8-serialize processing user input
+const v8 = require('v8');
+app.post('/restore', (req, res) => {
+  const obj = v8.deserialize(Buffer.from(req.body.serialized, 'base64'));  // RCE
+  res.json(obj);
+});
+
+// ❌ — eval() with JSON (code injection)
+app.post('/data', (req, res) => {
+  const data = eval('(' + req.body.json + ')');  // Code injection via JSON
+  res.json(data);
+});
+
+// ❌ — Unsafe JSON reviver allowing prototype pollution
+app.post('/parse', (req, res) => {
+  const data = JSON.parse(req.body.json, (key, value) => {
+    if (key === '__proto__') return value;  // Prototype pollution
+    return value;
+  });
+});
+```
+
+### ✅ SAFE
+
+```javascript
+// ✅ — Safe JSON parsing with schema validation
+const z = require('zod');
+const SessionSchema = z.object({
+  userId: z.string().uuid(),
+  role: z.enum(['user', 'admin']),
+  expires: z.number().positive()
+});
+
+app.post('/session', (req, res) => {
+  try {
+    const rawData = JSON.parse(req.body.json);
+    const sessionData = SessionSchema.parse(rawData);  // Schema validation
+    req.session = sessionData;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid session data' });
+  }
+});
+
+// ✅ — Avoid binary serialization entirely
+app.post('/data', (req, res) => {
+  // Use JSON for data exchange, not binary formats
+  const data = JSON.parse(req.body.json);  // Safe with proper validation
+  const validatedData = DataSchema.parse(data);
+  res.json(validatedData);
+});
+
+// ✅ — Safe JSON reviver blocking dangerous keys
+app.post('/parse', (req, res) => {
+  const data = JSON.parse(req.body.json, (key, value) => {
+    // Block prototype pollution attempts
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      return undefined;
+    }
+    return value;
+  });
+  res.json(data);
+});
+
+// ✅ — Integrity checking for serialized data
+const crypto = require('crypto');
+const SECRET_KEY = process.env.SERIALIZE_KEY;
+
+function safeSerialize(obj) {
+  const data = JSON.stringify(obj);
+  const hmac = crypto.createHmac('sha256', SECRET_KEY).update(data).digest('hex');
+  return { data, hmac };
+}
+
+function safeDeserialize(serialized) {
+  const { data, hmac } = serialized;
+  const expectedHmac = crypto.createHmac('sha256', SECRET_KEY).update(data).digest('hex');
+  
+  if (!crypto.timingSafeEqual(Buffer.from(hmac, 'hex'), Buffer.from(expectedHmac, 'hex'))) {
+    throw new Error('Data integrity check failed');
+  }
+  
+  return JSON.parse(data);
+}
+```
+
+---
+
+## S37 — Unrestricted File Upload
+
+**Severity**: HIGH | **CWE**: CWE-434 (Unrestricted Upload of File with Dangerous Type)
+
+Unrestricted file upload vulnerabilities allow attackers to upload malicious files that can be executed on the server or delivered to other users. This is particularly relevant for audit tools that process repository artifacts, configuration files, or accept user-provided analysis inputs.
+
+### Detect
+
+```bash
+# Find file upload endpoints
+grep -rn 'multer\|formidable\|busboy\|multipart\|upload\|\.single\|\.array' \
+  "$WORKSPACE" --include='*.ts' --include='*.js' -A5 -B2
+
+# Check for file extension validation
+grep -rn '\.extension\|\.extname\|\.endsWith\|\.includes.*\.\|mimeType' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+
+# Find file processing without validation
+grep -rn 'fs\.writeFile.*req\|fs\.createWriteStream.*req' \
+  "$WORKSPACE" --include='*.ts' --include='*.js'
+```
+
+Look for:
+
+- File upload handlers without extension or MIME type validation
+- Direct file writes from request data without sanitization
+- Missing file size limits or path traversal protection
+- Executable file uploads (js, php, exe, sh, bat)
+- Missing virus/malware scanning on uploaded files
+
+### ❌ NEVER
+
+```javascript
+// ❌ — Unrestricted file upload
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });  // No restrictions
+
+app.post('/upload', upload.single('file'), (req, res) => {
+  res.json({ filename: req.file.filename });  // Any file type allowed
+});
+
+// ❌ — No extension validation
+app.post('/upload', (req, res) => {
+  const filename = req.body.filename;
+  fs.writeFileSync(`./uploads/${filename}`, req.body.data);  // Path traversal + any extension
+});
+
+// ❌ — Trusting client-provided MIME type
+app.post('/upload', upload.single('file'), (req, res) => {
+  if (req.file.mimetype === 'image/jpeg') {  // Client can fake MIME type
+    // Process as safe image
+  }
+});
+```
+
+### ✅ SAFE
+
+```javascript
+// ✅ — Restricted file upload with validation
+const multer = require('multer');
+const path = require('path');
+
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.pdf', '.txt'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+const storage = multer.diskStorage({
+  destination: './uploads/',
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      return cb(new Error('File type not allowed'));
+    }
+    // Generate safe filename
+    const safeName = crypto.randomBytes(16).toString('hex') + ext;
+    cb(null, safeName);
+  }
+});
+
+const upload = multer({ 
+  storage,
+  limits: { fileSize: MAX_FILE_SIZE },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (ALLOWED_EXTENSIONS.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('File type not allowed'));
+    }
+  }
+});
+
+// ✅ — Magic byte validation
+const fileType = require('file-type');
+
+app.post('/upload', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    // Validate actual file type (not just extension)
+    const type = await fileType.fromFile(req.file.path);
+    const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    
+    if (!type || !allowedTypes.includes(type.mime)) {
+      fs.unlinkSync(req.file.path); // Delete invalid file
+      return res.status(400).json({ error: 'Invalid file type' });
+    }
+
+    res.json({ 
+      filename: req.file.filename,
+      size: req.file.size,
+      type: type.mime 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Upload failed' });
+  }
+});
+
+// ✅ — Virus scanning integration
+const NodeClam = require('clamscan');
+
+const clamscan = await new NodeClam().init({
+  removeInfected: true,
+  quarantineInfected: './quarantine/',
+  scanLog: './scan.log'
+});
+
+app.post('/secure-upload', upload.single('file'), async (req, res) => {
+  try {
+    const scanResult = await clamscan.scanFile(req.file.path);
+    
+    if (scanResult.isInfected) {
+      return res.status(400).json({ error: 'File contains malware' });
+    }
+    
+    res.json({ message: 'File uploaded and scanned successfully' });
+  } catch (error) {
+    fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: 'Security scan failed' });
+  }
+});
 ```
 
 ---
