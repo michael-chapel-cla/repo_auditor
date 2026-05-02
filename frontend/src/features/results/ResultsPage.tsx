@@ -23,14 +23,13 @@ import {
   Bar,
   XAxis,
   YAxis,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   Cell,
 } from "recharts";
 import { useResultsList, useResult } from "../../hooks/useResults.ts";
 import SeverityChip from "../../components/SeverityChip.tsx";
 import AutoFixDialog from "../../components/AutoFixDialog.tsx";
-import Phase1Banner from "../../components/Phase1Banner.tsx";
 import { severityColors } from "../../theme.ts";
 import { deriveScore } from "../../utils/score.ts";
 import type { Finding } from "../../services/results.service.ts";
@@ -43,7 +42,11 @@ const NPQ_COLUMNS: GridColDef<Finding>[] = [
     field: "severity",
     headerName: "Severity",
     width: 110,
-    renderCell: ({ row }) => <SeverityChip severity={row.severity} />,
+    renderCell: ({ row }) => (
+      <Box sx={{ display: "flex", alignItems: "center", height: "100%" }}>
+        <SeverityChip severity={row.severity} />
+      </Box>
+    ),
   },
   { field: "title", headerName: "Package / Signal", flex: 1, minWidth: 240 },
   { field: "rule", headerName: "Signal", width: 200 },
@@ -85,22 +88,29 @@ export default function ResultsPage() {
       headerName: "Severity",
       width: 110,
       renderCell: ({ row }) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 0.5,
+            height: "100%",
+          }}
+        >
           <SeverityChip severity={row.severity} />
           {row.severityAdjusted && (
-            <Tooltip 
+            <Tooltip
               title={`Originally ${row.severityAdjusted.originalSeverity.toUpperCase()}, adjusted to ${row.severityAdjusted.adjustedSeverity.toUpperCase()}: ${row.severityAdjusted.reason}`}
               arrow
             >
-              <Chip 
-                label="🎯" 
-                size="small" 
-                sx={{ 
-                  minWidth: 24, 
-                  height: 18, 
-                  fontSize: '0.6rem',
-                  backgroundColor: '#607d8b',
-                  color: '#fff'
+              <Chip
+                label="🎯"
+                size="small"
+                sx={{
+                  minWidth: 24,
+                  height: 18,
+                  fontSize: "0.6rem",
+                  backgroundColor: "#607d8b",
+                  color: "#fff",
                 }}
               />
             </Tooltip>
@@ -122,7 +132,11 @@ export default function ResultsPage() {
       headerName: "CWE",
       width: 110,
       renderCell: ({ row }) =>
-        row.cwe ? <Chip label={row.cwe} size="small" variant="outlined" /> : "—",
+        row.cwe ? (
+          <Chip label={row.cwe} size="small" variant="outlined" />
+        ) : (
+          "—"
+        ),
     },
     {
       field: "source",
@@ -130,20 +144,22 @@ export default function ResultsPage() {
       width: 120,
       renderCell: ({ row }) =>
         row.sources && row.sources.length > 1 ? (
-          <Chip 
-            label={`${row.sources.length} tools`} 
-            size="small" 
+          <Chip
+            label={`${row.sources.length} tools`}
+            size="small"
             variant="outlined"
             color="primary"
-            title={`Detected by: ${row.sources.join(', ')}`}
+            title={`Detected by: ${row.sources.join(", ")}`}
           />
-        ) : (
-          <Chip 
-            label={row.source} 
-            size="small" 
-            variant="outlined" 
+        ) : row.source ? (
+          <Chip
+            label={row.source}
+            size="small"
+            variant="outlined"
             title={`Detected by: ${row.source}`}
           />
+        ) : (
+          "—"
         ),
     },
     {
@@ -152,17 +168,19 @@ export default function ResultsPage() {
       width: 90,
       renderCell: ({ row }) =>
         row.status ? (
-          <Chip 
-            label={row.status} 
-            size="small" 
+          <Chip
+            label={row.status}
+            size="small"
             variant="filled"
-            color={row.status === 'new' ? 'error' : 'default'}
-            sx={{ 
-              fontSize: '0.75rem',
-              fontWeight: row.status === 'new' ? 'bold' : 'normal'
+            color={row.status === "new" ? "error" : "default"}
+            sx={{
+              fontSize: "0.75rem",
+              fontWeight: row.status === "new" ? "bold" : "normal",
             }}
           />
-        ) : "—",
+        ) : (
+          "—"
+        ),
     },
     {
       field: "autofix",
@@ -170,16 +188,18 @@ export default function ResultsPage() {
       width: 100,
       renderCell: ({ row }) =>
         row.autofix ? (
-          <Chip 
+          <Chip
             label="✨ Fix"
-            size="small" 
+            size="small"
             variant="outlined"
             color="success"
             title={row.autofix.description}
-            sx={{ cursor: 'pointer' }}
+            sx={{ cursor: "pointer" }}
             onClick={() => handleAutoFixClick(row)}
           />
-        ) : "—",
+        ) : (
+          "—"
+        ),
     },
     { field: "fix", headerName: "Description", flex: 1, minWidth: 200 },
   ];
@@ -310,15 +330,12 @@ export default function ResultsPage() {
             </Box>
           </Box>
 
-          {/* Phase 1 Enhancement Banner */}
-          <Phase1Banner summary={result.summary} />
-
           <Box sx={{ mb: 3, height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={severityCounts}>
                 <XAxis dataKey="name" />
                 <YAxis allowDecimals={false} />
-                <Tooltip />
+                <RechartsTooltip />
                 <Bar dataKey="value">
                   {severityCounts.map((entry) => (
                     <Cell
@@ -357,7 +374,7 @@ export default function ResultsPage() {
           />
         </>
       )}
-      
+
       {/* Phase 1 Enhancement: Auto-fix Dialog */}
       {selectedFinding && (
         <AutoFixDialog

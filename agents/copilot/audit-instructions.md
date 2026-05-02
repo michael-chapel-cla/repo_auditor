@@ -22,23 +22,36 @@ You are an expert code auditor. When asked to audit a repository:
 2. **Clone the repository** using the `gh` CLI. Use the OAuth session from `gh auth login` — this works with SSO-protected organisations.
 
    ```bash
-   gh repo clone owner/repo workspace/owner_repo -- --depth=50
+   gh repo clone owner/repo workspace/owner_repo -- --depth=200
    ```
 
    Requires the `gh` CLI to be authenticated (`gh auth login`). The OAuth token issued by `gh auth login` has the necessary `repo` scope and works with SSO-protected organisations.
 
 3. **Run audit checks** using available shell tools:
    - `npm audit --json` for dependency vulnerabilities — see private registry note below
-   - `npx --yes npq@latest marshal` for supply-chain signals (deprecated, low downloads, single maintainer, new package, no license, missing from registry). Map each signal to the `npq` findings category with `source: "npq"`. Save raw output to `npq-raw.json`.
-   - `semgrep --config .semgrep/ai-code-security.yml` for code patterns
+   - `npx npq --dry-run --plain 2>&1 | tee "$OUT_DIR/npq-raw.json"` for supply-chain signals (deprecated, low downloads, single maintainer, new package, no license, missing from registry). Map each signal to the `npq` findings category with `source: "npq"`. The `--plain` flag produces text output; save it to `npq-raw.json` for the UI.
+   - `semgrep scan --config=auto --json src/` for code patterns — the `/usr/local/bin/semgrep` wrapper delegates to Docker automatically; no extra flags needed
    - Read files directly for AI-powered analysis
-   - `npx eslint --format json` for code quality
+   - `npx eslint src/ --format json` for code quality
+   - `npx tsc --noEmit` for TypeScript compile errors
+   - `npx vitest --run --coverage` for test results and coverage
    - `npx depcheck --json` for unused dependencies
 
-   **Private npm registry**: if the repo's `.npmrc` references `${NPM_TOKEN}`, the token must be set in the environment before running `npm audit`. Check `.env` for `NPM_TOKEN`. If missing, npm audit will return HTTP 401 and produce no findings — record a single `info` finding `"npm audit skipped — NPM_TOKEN not set"` and continue.
+   **node_modules prerequisite**: ESLint, tsc, vitest, and npq all require `node_modules` to be installed. Before running any of these tools, check whether `node_modules/` exists in the cloned workspace. If not, install dependencies first:
 
    ```bash
-   export NPM_TOKEN="$NPM_TOKEN"
+   # Load NPM_TOKEN if present (required for private Azure Artifacts registries)
+   if [ -f /workspace/.env ]; then
+     export $(grep -v '^#' /workspace/.env | grep NPM_TOKEN | xargs) 2>/dev/null || true
+   fi
+   npm install --prefer-offline 2>&1 | tail -5
+   ```
+
+   **Private npm registry**: if the repo's `.npmrc` references `${NPM_TOKEN}`, the token must be set in the environment before running `npm audit` or `npm install`. Check `/workspace/.env` for `NPM_TOKEN`. If missing, npm install and npm audit will return HTTP 401 — record a single `info` finding `"npm audit skipped — NPM_TOKEN not set"` and continue without ESLint/tsc/vitest/npq results.
+
+   ```bash
+   # Always load from /workspace/.env — it is gitignored and safe
+   [ -f /workspace/.env ] && export $(grep -v '^#' /workspace/.env | grep NPM_TOKEN | xargs) 2>/dev/null || true
    cd "$WORKSPACE" && npm audit --json > "$OUT_DIR/npm-audit.json" 2>/dev/null || true
    ```
 
@@ -174,26 +187,27 @@ You are an expert code auditor. When asked to audit a repository:
      - `"completedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` when writing final results (Step 5)
      - `"agentTool": "copilot"`
    - `npm-audit.json` — raw unmodified output of `npm audit --json` (preserved for UI display)
-   - `npq-raw.json` — raw npq marshal output
+   - `npq-raw.json` — raw npq `--dry-run --plain` output (text, not JSON)
    - `contributors.json` — contributor stats (see step 4)
    - `report.md` — markdown summary
    - `report.html` — HTML report
 
-6. **Apply Phase 1 "Richer Findings" Enhancements**:
+6. **Apply Phase 1 "Richer Findings" Enhancements** _(mandatory — run before generating reports)_:
 
-   After generating the initial `results.json`, run the Phase 1 enhancement utilities to reduce false positives and make findings actionable:
+   After writing the initial `results.json` and **before** generating `report.md`/`report.html`, run the Phase 1 enhancement utilities from the `/workspace` directory:
 
    ```bash
+   cd /workspace
    node utils/apply-phase1-enhancements.js "$OUT_DIR/results.json" "$REPORTS_DIR" "$WORKSPACE"
    ```
 
-   This applies all four Phase 1 enhancements:
-   - **Baseline Suppression (1.1)** — Marks findings as `new` or `existing` vs previous audit
-   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple issues  
-   - **Context-aware Severity (1.3)** — Adjusts severity based on file context (tests, docs, etc.)
-   - **Cross-tool Deduplication (1.4)** — Merges duplicate findings from different tools
+   This applies all four Phase 1 enhancements in sequence:
+   - **Baseline Suppression (1.1)** — Tags each finding `new` or `existing` vs the previous audit run
+   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple fixable issues
+   - **Context-aware Severity (1.3)** — Downgrades severity for findings in test/docs/config files
+   - **Cross-tool Deduplication (1.4)** — Merges duplicate findings reported by multiple tools
 
-   The utilities will update `results.json` with enhanced metadata and summary statistics.
+   The script updates `results.json` in-place. The final `results.json` (after this step) is the authoritative output. Do not skip this step — it reduces false positives and may change finding counts and the overall score used in `report.md`.
 
 7. **Commit and push** the reports back to the repo (or upload as workflow artifacts).
 
