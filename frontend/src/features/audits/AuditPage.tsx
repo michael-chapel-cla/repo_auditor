@@ -92,7 +92,7 @@ const AGENT_TOOLS = [
     command: "./scripts/run-with-copilot.sh myorg/repo-auditor owner/repo",
     description:
       "Triggers the audit GitHub Actions workflow. Requires gh CLI and the repo to be on GitHub.",
-    slashCommand: "gh workflow run audit.yml --field target_repo=owner/repo",
+    slashCommand: "Run audit on owner/repo",
   },
 ];
 

@@ -211,6 +211,23 @@ You are an expert code auditor. When asked to audit a repository:
 
 7. **Commit and push** the reports back to the repo (or upload as workflow artifacts).
 
+8. **Clean up the cloned workspace** after all reports are written and pushed:
+
+   ```bash
+   rm -rf "workspace/${OWNER}_${REPO}"
+   ```
+
+   - Always remove the cloned directory regardless of whether the audit succeeded or failed (use a `trap` in shell scripts to guarantee cleanup).
+   - Never leave cloned workspaces on disk — they may contain sensitive source code, secrets, or `.env` files.
+   - Example with guaranteed cleanup:
+
+   ```bash
+   WORKSPACE="workspace/${OWNER}_${REPO}"
+   trap 'rm -rf "$WORKSPACE"' EXIT
+   gh repo clone "$OWNER/$REPO" "$WORKSPACE" -- --depth=200
+   # ... rest of audit ...
+   ```
+
 ## Output schema
 
 See `scripts/report-schema.json` for the exact JSON structure all agents must produce.

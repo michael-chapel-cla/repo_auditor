@@ -29,7 +29,7 @@ Select **GitHub.com**, **HTTPS**, and authenticate via browser. This grants the 
 In **GitHub Copilot Chat**, type:
 
 ```
-Run a full audit on myorg/target-repo
+Run audit on myorg/target-repo
 ```
 
 Copilot will read `agents/copilot/audit-instructions.md` and execute the audit steps automatically.
