@@ -120,7 +120,21 @@ Read migration `.sql` files and ORM/repository source files. Analyze for:
    - `report.md` — human-readable markdown report
    - `report.html` — HTML report with color-coded severity
 
-6. Delete the cloned repository from the workspace:
+6. **Apply Phase 1 "Richer Findings" Enhancements**:
+
+   After generating the initial `results.json`, run the Phase 1 enhancement utilities:
+
+   ```bash
+   node utils/apply-phase1-enhancements.js "reports/${slug}/${uuid}/results.json" "reports/" "workspace/${slug}"
+   ```
+
+   This applies all four Phase 1 enhancements:
+   - **Baseline Suppression (1.1)** — Marks findings as `new` or `existing` vs previous audit
+   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple issues  
+   - **Context-aware Severity (1.3)** — Adjusts severity based on file context
+   - **Cross-tool Deduplication (1.4)** — Merges duplicate findings from different tools
+
+7. Delete the cloned repository from the workspace:
 
    ```bash
    rm -rf "workspace/$SLUG"

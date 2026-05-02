@@ -98,7 +98,24 @@ Write the merged file: `$OUT_DIR/results.json`
 - Color-coded severity badges (critical=red, high=orange, medium=yellow, low=blue)
 - Summary metric cards at the top
 
-### Step 6 — Cleanup
+### Step 6 — Apply Phase 1 "Richer Findings" Enhancements
+
+Run all Phase 1 enhancements to reduce false positives and make findings actionable:
+
+```bash
+node utils/apply-phase1-enhancements.js "$OUT_DIR/results.json" "$REPORTS_DIR" "$WORKSPACE"
+```
+
+This applies all four Phase 1 enhancements in sequence:
+
+1. **Baseline Suppression (1.1)** — Compares against previous audit, marks findings as `new` or `existing`
+2. **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple issues (console.log, unused deps, `: any`)  
+3. **Context-aware Severity (1.3)** — Adjusts severity based on file context (e.g., Math.random() in test files → info)
+4. **Cross-tool Deduplication (1.4)** — Merges duplicate findings from different tools into single entries
+
+The `results.json` file is updated with enhanced finding metadata and comprehensive summary statistics.
+
+### Step 7 — Cleanup
 
 Delete the cloned repository from the workspace to avoid leaving sensitive code on disk:
 
@@ -107,11 +124,11 @@ rm -rf "$WORKSPACE"
 echo "Removed workspace: $WORKSPACE"
 ```
 
-### Step 7 — Done
+### Step 8 — Done
 
 Print a summary:
 
-```
+```text
 ✅ Audit complete: {repo}
    Audit ID: {auditId}
    Score: {overallScore}/100

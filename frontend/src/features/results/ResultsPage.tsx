@@ -13,6 +13,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  Tooltip,
 } from "@mui/material";
 import { Download as DownloadIcon } from "@mui/icons-material";
 import { DataGrid } from "@mui/x-data-grid";
@@ -28,46 +29,13 @@ import {
 } from "recharts";
 import { useResultsList, useResult } from "../../hooks/useResults.ts";
 import SeverityChip from "../../components/SeverityChip.tsx";
+import AutoFixDialog from "../../components/AutoFixDialog.tsx";
+import Phase1Banner from "../../components/Phase1Banner.tsx";
 import { severityColors } from "../../theme.ts";
 import { deriveScore } from "../../utils/score.ts";
 import type { Finding } from "../../services/results.service.ts";
 
-const COLUMNS: GridColDef<Finding>[] = [
-  {
-    field: "severity",
-    headerName: "Severity",
-    width: 110,
-    renderCell: ({ row }) => <SeverityChip severity={row.severity} />,
-  },
-  { field: "title", headerName: "Title", flex: 1, minWidth: 200 },
-  {
-    field: "file",
-    headerName: "File",
-    width: 280,
-    renderCell: ({ row }) =>
-      row.file ? `${row.file}${row.line ? `:${row.line}` : ""}` : "—",
-  },
-  { field: "rule", headerName: "Rule", width: 160 },
-  {
-    field: "cwe",
-    headerName: "CWE",
-    width: 110,
-    renderCell: ({ row }) =>
-      row.cwe ? <Chip label={row.cwe} size="small" variant="outlined" /> : "—",
-  },
-  {
-    field: "source",
-    headerName: "Source",
-    width: 120,
-    renderCell: ({ row }) =>
-      row.source ? (
-        <Chip label={row.source} size="small" variant="outlined" />
-      ) : (
-        "—"
-      ),
-  },
-  { field: "fix", headerName: "Fix", flex: 1, minWidth: 200 },
-];
+// Move columns inside component to access click handlers
 
 /** NPQ supply-chain specific columns — shows signal type, package, and remediation */
 const NPQ_COLUMNS: GridColDef<Finding>[] = [
@@ -101,8 +69,120 @@ export default function ResultsPage() {
     paramAuditId ?? "",
   );
   const { result, loading, error } = useResult(selectedAuditId || paramAuditId);
+  const [autoFixDialogOpen, setAutoFixDialogOpen] = useState(false);
+  const [selectedFinding, setSelectedFinding] = useState<Finding | null>(null);
   const [tab, setTab] = useState(0);
   const navigate = useNavigate();
+
+  const handleAutoFixClick = (finding: Finding) => {
+    setSelectedFinding(finding);
+    setAutoFixDialogOpen(true);
+  };
+
+  const COLUMNS: GridColDef<Finding>[] = [
+    {
+      field: "severity",
+      headerName: "Severity",
+      width: 110,
+      renderCell: ({ row }) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+          <SeverityChip severity={row.severity} />
+          {row.severityAdjusted && (
+            <Tooltip 
+              title={`Originally ${row.severityAdjusted.originalSeverity.toUpperCase()}, adjusted to ${row.severityAdjusted.adjustedSeverity.toUpperCase()}: ${row.severityAdjusted.reason}`}
+              arrow
+            >
+              <Chip 
+                label="🎯" 
+                size="small" 
+                sx={{ 
+                  minWidth: 24, 
+                  height: 18, 
+                  fontSize: '0.6rem',
+                  backgroundColor: '#607d8b',
+                  color: '#fff'
+                }}
+              />
+            </Tooltip>
+          )}
+        </Box>
+      ),
+    },
+    { field: "title", headerName: "Title", flex: 1, minWidth: 200 },
+    {
+      field: "file",
+      headerName: "File",
+      width: 280,
+      renderCell: ({ row }) =>
+        row.file ? `${row.file}${row.line ? `:${row.line}` : ""}` : "—",
+    },
+    { field: "rule", headerName: "Rule", width: 160 },
+    {
+      field: "cwe",
+      headerName: "CWE",
+      width: 110,
+      renderCell: ({ row }) =>
+        row.cwe ? <Chip label={row.cwe} size="small" variant="outlined" /> : "—",
+    },
+    {
+      field: "source",
+      headerName: "Source",
+      width: 120,
+      renderCell: ({ row }) =>
+        row.sources && row.sources.length > 1 ? (
+          <Chip 
+            label={`${row.sources.length} tools`} 
+            size="small" 
+            variant="outlined"
+            color="primary"
+            title={`Detected by: ${row.sources.join(', ')}`}
+          />
+        ) : (
+          <Chip 
+            label={row.source} 
+            size="small" 
+            variant="outlined" 
+            title={`Detected by: ${row.source}`}
+          />
+        ),
+    },
+    {
+      field: "status",
+      headerName: "Status",
+      width: 90,
+      renderCell: ({ row }) =>
+        row.status ? (
+          <Chip 
+            label={row.status} 
+            size="small" 
+            variant="filled"
+            color={row.status === 'new' ? 'error' : 'default'}
+            sx={{ 
+              fontSize: '0.75rem',
+              fontWeight: row.status === 'new' ? 'bold' : 'normal'
+            }}
+          />
+        ) : "—",
+    },
+    {
+      field: "autofix",
+      headerName: "Auto-fix",
+      width: 100,
+      renderCell: ({ row }) =>
+        row.autofix ? (
+          <Chip 
+            label="✨ Fix"
+            size="small" 
+            variant="outlined"
+            color="success"
+            title={row.autofix.description}
+            sx={{ cursor: 'pointer' }}
+            onClick={() => handleAutoFixClick(row)}
+          />
+        ) : "—",
+    },
+    { field: "fix", headerName: "Description", flex: 1, minWidth: 200 },
+  ];
 
   // Default to the most recent audit when no auditId is in the URL
   useEffect(() => {
@@ -230,6 +310,9 @@ export default function ResultsPage() {
             </Box>
           </Box>
 
+          {/* Phase 1 Enhancement Banner */}
+          <Phase1Banner summary={result.summary} />
+
           <Box sx={{ mb: 3, height: 160 }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={severityCounts}>
@@ -273,6 +356,15 @@ export default function ResultsPage() {
             sx={{ backgroundColor: "white", borderRadius: 2 }}
           />
         </>
+      )}
+      
+      {/* Phase 1 Enhancement: Auto-fix Dialog */}
+      {selectedFinding && (
+        <AutoFixDialog
+          open={autoFixDialogOpen}
+          onClose={() => setAutoFixDialogOpen(false)}
+          finding={selectedFinding}
+        />
       )}
     </Box>
   );

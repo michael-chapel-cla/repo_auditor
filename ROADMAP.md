@@ -4,16 +4,22 @@ This document tracks planned enhancements by phase. Each phase builds on the pre
 
 ---
 
-## Phase 1 — Richer Findings
+## Phase 1 — Richer Findings ✅ **COMPLETED**
 
 **Goal:** reduce false positives, make every finding immediately actionable
 
-| # | Feature | Description |
-|---|---------|-------------|
-| 1.1 | Baseline suppression | Compare findings against the previous audit run. Mark each finding `new` or `existing`. Focus developer attention on regressions, not noise. |
-| 1.2 | Auto-fix suggestions with diffs | For low-complexity findings (unused deps, `console.log`, `: any`), generate the exact patch to apply — not just prose. |
-| 1.3 | Context-aware severity | Suppress known-safe patterns: `Math.random()` in a test file is not a security issue. Apply file-path rules before emitting findings. |
-| 1.4 | Cross-tool deduplication | If Claude and Semgrep both flag the same line, merge into one finding with `sources: ["ai", "semgrep"]` rather than two separate entries. |
+**🎉 STATUS: All 4 features successfully implemented (May 2025)**
+
+| # | Feature | Description | Status |
+|---|---------|-------------|--------|
+| 1.1 | Baseline suppression | Compare findings against the previous audit run. Mark each finding `new` or `existing`. Focus developer attention on regressions, not noise. | ✅ **DONE** — baseline-suppression.js utility |
+| 1.2 | Auto-fix suggestions with diffs | For low-complexity findings (unused deps, `console.log`, `: any`), generate the exact patch to apply — not just prose. | ✅ **DONE** — auto-fix-generator.js utility |
+| 1.3 | Context-aware severity | Suppress known-safe patterns: `Math.random()` in a test file is not a security issue. Apply file-path rules before emitting findings. | ✅ **DONE** — context-aware-severity.js utility |
+| 1.4 | Cross-tool deduplication | If Claude and Semgrep both flag the same line, merge into one finding with `sources: ["ai", "semgrep"]` rather than two separate entries. | ✅ **DONE** — cross-tool-deduplication.js utility |
+
+**Implementation:** All Phase 1 enhancements are integrated into the main audit flow via `utils/apply-phase1-enhancements.js` and activated by default in `agents/claude/full-audit.md` Step 6. Available via `/phase1-audit` command.
+
+**Impact:** Significantly reduced false positives, enhanced finding actionability, improved developer experience with baseline comparison and auto-fix suggestions.
 
 ---
 

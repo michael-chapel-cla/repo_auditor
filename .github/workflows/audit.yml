@@ -157,6 +157,22 @@ jobs:
           EOF
           }
 
+      - name: Apply Phase 1 Enhancements
+        if: always() && steps.static.outputs.out_dir
+        env:
+          OUT_DIR: ${{ steps.static.outputs.out_dir }}
+          WORKSPACE: ${{ steps.static.outputs.workspace }}
+        run: |
+          # Apply Phase 1 "Richer Findings" enhancements if results.json exists
+          if [ -f "$OUT_DIR/results.json" ]; then
+            echo "Applying Phase 1 enhancements to $OUT_DIR/results.json"
+            node utils/apply-phase1-enhancements.js "$OUT_DIR/results.json" "reports/" "$WORKSPACE" || {
+              echo "Phase 1 enhancements failed, continuing with basic results"
+            }
+          else
+            echo "No results.json found, skipping Phase 1 enhancements"
+          fi
+
       - name: Remove cloned repository
         if: always()
         env:

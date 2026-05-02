@@ -179,7 +179,23 @@ You are an expert code auditor. When asked to audit a repository:
    - `report.md` — markdown summary
    - `report.html` — HTML report
 
-6. **Commit and push** the reports back to the repo (or upload as workflow artifacts).
+6. **Apply Phase 1 "Richer Findings" Enhancements**:
+
+   After generating the initial `results.json`, run the Phase 1 enhancement utilities to reduce false positives and make findings actionable:
+
+   ```bash
+   node utils/apply-phase1-enhancements.js "$OUT_DIR/results.json" "$REPORTS_DIR" "$WORKSPACE"
+   ```
+
+   This applies all four Phase 1 enhancements:
+   - **Baseline Suppression (1.1)** — Marks findings as `new` or `existing` vs previous audit
+   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple issues  
+   - **Context-aware Severity (1.3)** — Adjusts severity based on file context (tests, docs, etc.)
+   - **Cross-tool Deduplication (1.4)** — Merges duplicate findings from different tools
+
+   The utilities will update `results.json` with enhanced metadata and summary statistics.
+
+7. **Commit and push** the reports back to the repo (or upload as workflow artifacts).
 
 ## Output schema
 

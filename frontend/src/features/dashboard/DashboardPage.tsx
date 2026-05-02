@@ -223,6 +223,74 @@ function RepoCard({ item }: { item: AuditListItem }) {
               </Box>
             </>
           )}
+          
+          {/* Phase 1 Enhancement Indicators */}
+          {(summary.baselineComparison || summary.autoFixSuggestions || summary.crossToolDeduplication) && (
+            <>
+              <Divider sx={{ mb: 1 }} />
+              <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                {summary.baselineComparison && (
+                  <Tooltip 
+                    title={`${summary.baselineComparison.newFindings} new, ${summary.baselineComparison.existingFindings} existing findings`}
+                    arrow
+                  >
+                    <Chip
+                      label={summary.baselineComparison.newFindings > 0 ? "📈 New Issues" : "📊 Tracked"}
+                      size="small"
+                      sx={{
+                        backgroundColor: summary.baselineComparison.newFindings > 0 ? "#ff9800" : "#4caf50",
+                        color: "#fff",
+                        fontSize: "0.6rem",
+                        height: 18,
+                      }}
+                    />
+                  </Tooltip>
+                )}
+                {summary.autoFixSuggestions && summary.autoFixSuggestions.totalFixable > 0 && (
+                  <Tooltip title={`${summary.autoFixSuggestions.totalFixable} findings have auto-fix suggestions`} arrow>
+                    <Chip
+                      label="✨ Auto-fixes"
+                      size="small"
+                      sx={{
+                        backgroundColor: "#2196f3",
+                        color: "#fff",
+                        fontSize: "0.6rem",
+                        height: 18,
+                      }}
+                    />
+                  </Tooltip>
+                )}
+                {summary.crossToolDeduplication && summary.crossToolDeduplication.reductionCount > 0 && (
+                  <Tooltip title={`${summary.crossToolDeduplication.reductionCount} duplicate findings merged`} arrow>
+                    <Chip
+                      label="🔗 Deduped"
+                      size="small"
+                      sx={{
+                        backgroundColor: "#9c27b0",
+                        color: "#fff",
+                        fontSize: "0.6rem",
+                        height: 18,
+                      }}
+                    />
+                  </Tooltip>
+                )}
+                {summary.contextAwareSeverity && summary.contextAwareSeverity.adjustmentsApplied > 0 && (
+                  <Tooltip title={`${summary.contextAwareSeverity.adjustmentsApplied} severity adjustments applied`} arrow>
+                    <Chip
+                      label="🎯 Smart"
+                      size="small"
+                      sx={{
+                        backgroundColor: "#607d8b",
+                        color: "#fff",
+                        fontSize: "0.6rem",
+                        height: 18,
+                      }}
+                    />
+                  </Tooltip>
+                )}
+              </Box>
+            </>
+          )}
         </CardContent>
       </CardActionArea>
     </Card>
