@@ -72,7 +72,7 @@ const server = createServer(async (req, res) => {
             };
             results.push({
               auditId,
-              repoFullName: data.repoFullName,
+              repoFullName: data.repoFullName ?? repoDir.replace("_", "/"),
               startedAt: data.startedAt,
               completedAt: data.completedAt,
               summary: data.summary,

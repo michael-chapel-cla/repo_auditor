@@ -126,6 +126,39 @@ export default function ResultsPage() {
       renderCell: ({ row }) =>
         row.file ? `${row.file}${row.line ? `:${row.line}` : ""}` : "—",
     },
+    {
+      field: "blame",
+      headerName: "Blame",
+      width: 180,
+      renderCell: ({ row }) =>
+        row.blame ? (
+          <Tooltip
+            title={`${row.blame.commitHash.slice(0, 8)} — ${row.blame.commitSummary}`}
+            arrow
+          >
+            <Box sx={{ lineHeight: 1.3 }}>
+              <Typography
+                variant="caption"
+                display="block"
+                fontWeight="bold"
+                noWrap
+              >
+                {row.blame.authorName}
+              </Typography>
+              <Typography
+                variant="caption"
+                display="block"
+                color="text.secondary"
+                noWrap
+              >
+                {new Date(row.blame.authorDate).toLocaleDateString()}
+              </Typography>
+            </Box>
+          </Tooltip>
+        ) : (
+          "—"
+        ),
+    },
     { field: "rule", headerName: "Rule", width: 160 },
     {
       field: "cwe",

@@ -12,7 +12,7 @@ import {
   Paper,
   IconButton,
 } from "@mui/material";
-import { 
+import {
   Close as CloseIcon,
   ContentCopy as CopyIcon,
   CheckCircle as CheckIcon,
@@ -25,7 +25,11 @@ interface AutoFixDialogProps {
   finding: Finding;
 }
 
-export default function AutoFixDialog({ open, onClose, finding }: AutoFixDialogProps) {
+export default function AutoFixDialog({
+  open,
+  onClose,
+  finding,
+}: AutoFixDialogProps) {
   const [copied, setCopied] = useState(false);
 
   if (!finding.autofix) return null;
@@ -48,23 +52,29 @@ export default function AutoFixDialog({ open, onClose, finding }: AutoFixDialogP
 
   const confidenceColor = {
     high: "success",
-    medium: "warning", 
-    low: "error"
+    medium: "warning",
+    low: "error",
   } as const;
 
   return (
-    <Dialog 
-      open={open} 
-      onClose={onClose} 
-      maxWidth="md" 
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
       fullWidth
-      PaperProps={{ sx: { maxHeight: '80vh' } }}
+      PaperProps={{ sx: { maxHeight: "80vh" } }}
     >
-      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <DialogTitle
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
           ✨ Auto-fix Suggestion
           {finding.autofix.confidence && (
-            <Chip 
+            <Chip
               label={`${finding.autofix.confidence} confidence`}
               size="small"
               color={confidenceColor[finding.autofix.confidence]}
@@ -83,26 +93,84 @@ export default function AutoFixDialog({ open, onClose, finding }: AutoFixDialogP
             {finding.title}
           </Typography>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            {finding.file}{finding.line ? `:${finding.line}` : ''}
+            {finding.file}
+            {finding.line ? `:${finding.line}` : ""}
           </Typography>
         </Box>
 
-        <Alert 
-          severity="info" 
-          sx={{ mb: 3 }}
-          icon={<CheckIcon />}
-        >
+        <Alert severity="info" sx={{ mb: 3 }} icon={<CheckIcon />}>
           <Typography variant="body2">
             <strong>Suggested Fix:</strong> {finding.autofix.description}
           </Typography>
         </Alert>
 
-        {finding.autofix.type === 'diff' && finding.autofix.patch && (
+        {finding.autofix.type === "agent-context" && (
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="subtitle2">
-                Diff Patch
-              </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 1,
+              }}
+            >
+              <Typography variant="subtitle2">Copilot Chat Prompt</Typography>
+              <Button
+                startIcon={copied ? <CheckIcon /> : <CopyIcon />}
+                variant="outlined"
+                size="small"
+                color={copied ? "success" : "primary"}
+                onClick={async () => {
+                  const prompt =
+                    finding.autofix?.agentPrompt?.copilotChatPrompt;
+                  if (prompt) {
+                    await navigator.clipboard.writeText(prompt);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }
+                }}
+              >
+                {copied ? "Copied!" : "Copy Prompt"}
+              </Button>
+            </Box>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: "block", mb: 1 }}
+            >
+              Paste this into GitHub Copilot Chat to get a specific fix for this
+              finding.
+            </Typography>
+            <Paper
+              variant="outlined"
+              sx={{
+                p: 2,
+                bgcolor: "grey.50",
+                fontFamily: "monospace",
+                fontSize: "0.8rem",
+                maxHeight: "320px",
+                overflow: "auto",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}
+            >
+              {finding.autofix.agentPrompt?.copilotChatPrompt ??
+                "No prompt available."}
+            </Paper>
+          </Box>
+        )}
+
+        {finding.autofix.type === "diff" && finding.autofix.patch && (
+          <Box>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 1,
+              }}
+            >
+              <Typography variant="subtitle2">Diff Patch</Typography>
               <Button
                 startIcon={copied ? <CheckIcon /> : <CopyIcon />}
                 variant="outlined"
@@ -110,20 +178,20 @@ export default function AutoFixDialog({ open, onClose, finding }: AutoFixDialogP
                 onClick={handleCopyPatch}
                 color={copied ? "success" : "primary"}
               >
-                {copied ? 'Copied!' : 'Copy Patch'}
+                {copied ? "Copied!" : "Copy Patch"}
               </Button>
             </Box>
             <Paper
               variant="outlined"
               sx={{
                 p: 2,
-                bgcolor: 'grey.50',
-                fontFamily: 'monospace',
-                fontSize: '0.875rem',
-                maxHeight: '300px',
-                overflow: 'auto',
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-all',
+                bgcolor: "grey.50",
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+                maxHeight: "300px",
+                overflow: "auto",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-all",
               }}
             >
               {finding.autofix.patch}
@@ -131,12 +199,17 @@ export default function AutoFixDialog({ open, onClose, finding }: AutoFixDialogP
           </Box>
         )}
 
-        {finding.autofix.type === 'command' && finding.autofix.command && (
+        {finding.autofix.type === "command" && finding.autofix.command && (
           <Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-              <Typography variant="subtitle2">
-                Command
-              </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 1,
+              }}
+            >
+              <Typography variant="subtitle2">Command</Typography>
               <Button
                 startIcon={copied ? <CheckIcon /> : <CopyIcon />}
                 variant="outlined"
@@ -144,17 +217,17 @@ export default function AutoFixDialog({ open, onClose, finding }: AutoFixDialogP
                 onClick={handleCopyCommand}
                 color={copied ? "success" : "primary"}
               >
-                {copied ? 'Copied!' : 'Copy Command'}
+                {copied ? "Copied!" : "Copy Command"}
               </Button>
             </Box>
             <Paper
               variant="outlined"
               sx={{
                 p: 2,
-                bgcolor: 'grey.50',
-                fontFamily: 'monospace',
-                fontSize: '0.875rem',
-                whiteSpace: 'pre-wrap',
+                bgcolor: "grey.50",
+                fontFamily: "monospace",
+                fontSize: "0.875rem",
+                whiteSpace: "pre-wrap",
               }}
             >
               {finding.autofix.command}
@@ -162,18 +235,20 @@ export default function AutoFixDialog({ open, onClose, finding }: AutoFixDialogP
           </Box>
         )}
 
-        {finding.autofix.confidence === 'medium' && (
+        {finding.autofix.confidence === "medium" && (
           <Alert severity="warning" sx={{ mt: 2 }}>
             <Typography variant="body2">
-              <strong>Review Required:</strong> This auto-fix suggestion should be reviewed before applying.
+              <strong>Review Required:</strong> This auto-fix suggestion should
+              be reviewed before applying.
             </Typography>
           </Alert>
         )}
 
-        {finding.autofix.confidence === 'low' && (
+        {finding.autofix.confidence === "low" && (
           <Alert severity="error" sx={{ mt: 2 }}>
             <Typography variant="body2">
-              <strong>Caution:</strong> This auto-fix suggestion may not be accurate. Please review carefully.
+              <strong>Caution:</strong> This auto-fix suggestion may not be
+              accurate. Please review carefully.
             </Typography>
           </Alert>
         )}

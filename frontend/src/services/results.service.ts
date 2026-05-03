@@ -45,17 +45,40 @@ export interface Finding {
   status?: "new" | "existing";
   sources?: string[];
   autofix?: {
-    type: "diff" | "command";
+    type: "diff" | "command" | "agent-context";
     description: string;
     patch?: string;
     command?: string;
     confidence?: "high" | "medium" | "low";
+    complexity?: string;
+    requiresAgentAnalysis?: boolean;
+    agentContext?: {
+      suggestions?: string[];
+      targetFile?: {
+        path: string;
+        lineNumber: number;
+        language: string;
+      } | null;
+      [key: string]: unknown;
+    };
+    agentPrompt?: {
+      copilotChatPrompt?: string;
+      [key: string]: unknown;
+    };
   };
   severityAdjusted?: {
     originalSeverity: string;
     adjustedSeverity: string;
     rule: string;
     reason: string;
+  };
+  blame?: {
+    commitHash: string;
+    authorName: string;
+    authorEmail: string;
+    authorDate: string;
+    commitSummary: string;
+    isBot: boolean;
   };
   deduplicated?: {
     mergedFrom: Array<{

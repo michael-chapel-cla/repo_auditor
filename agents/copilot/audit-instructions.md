@@ -11,7 +11,9 @@ This agent is triggered by:
 
 ## What to do
 
-You are an expert code auditor. When asked to audit a repository:
+You are an expert code auditor. When asked to audit a repository.
+
+> **⚠️ MANDATORY COMPLETION REQUIREMENT**: You MUST execute every numbered step and sub-step in this file. Do not summarise, skip, abbreviate, or defer any step — even if earlier findings are already severe enough to form a conclusion. All tool commands must actually be run in a terminal. All output files must be written. Complete the pre-report checklist before writing `results.json`.
 
 1. **Read reference docs first**:
    - `docs/context/01-security.md` — security rules with severity + detection patterns
@@ -27,15 +29,78 @@ You are an expert code auditor. When asked to audit a repository:
 
    Requires the `gh` CLI to be authenticated (`gh auth login`). The OAuth token issued by `gh auth login` has the necessary `repo` scope and works with SSO-protected organisations.
 
-3. **Run audit checks** using available shell tools:
-   - `npm audit --json` for dependency vulnerabilities — see private registry note below
-   - `npx npq --dry-run --plain 2>&1 | tee "$OUT_DIR/npq-raw.json"` for supply-chain signals (deprecated, low downloads, single maintainer, new package, no license, missing from registry). Map each signal to the `npq` findings category with `source: "npq"`. The `--plain` flag produces text output; save it to `npq-raw.json` for the UI.
-   - `semgrep scan --config=auto --json src/` for code patterns — the `/usr/local/bin/semgrep` wrapper delegates to Docker automatically; no extra flags needed
-   - Read files directly for AI-powered analysis
-   - `npx eslint src/ --format json` for code quality
-   - `npx tsc --noEmit` for TypeScript compile errors
-   - `npx vitest --run --coverage` for test results and coverage
-   - `npx depcheck --json` for unused dependencies
+3. **Run ALL of the following audit checks** — every sub-step is mandatory. Run each command, record its output, and do not proceed to step 4 until all have been executed.
+
+   **3.1 [MANDATORY] npm audit** — dependency vulnerability scan
+
+   ```bash
+   cd "$WORKSPACE" && npm audit --json > "$OUT_DIR/npm-audit.json" 2>/dev/null || true
+   ```
+
+   See private registry note below. Convert findings to the `npm` category (not merged into `security`).
+
+   **3.2 [MANDATORY] npq** — supply-chain signals (deprecated, low downloads, single maintainer, new package, no license, missing from public registry)
+
+   ```bash
+   cd "$WORKSPACE" && npx npq marshal --dry-run --plain 2>&1 | tee "$OUT_DIR/npq-raw.json" || true
+   ```
+
+   Map each signal to the `npq` findings category with `source: "npq"`.
+
+   **3.3 [MANDATORY] gitleaks** — secret and credential scanning
+
+   ```bash
+   gitleaks detect --source "$WORKSPACE" --report-format json \
+     --report-path "$OUT_DIR/gitleaks.json" --no-git 2>/dev/null || true
+   ```
+
+   Map findings to `category: security`, `rule: S03`, `source: gitleaks`. Also manually scan `helm/values-*.yaml` and `.github/workflows/*.yml` for hardcoded Azure OpenAI API keys (format: `[A-Za-z0-9]{40,}J99[A-Z0-9]{4,}`) — gitleaks may miss Azure-format keys.
+
+   **3.4 [MANDATORY] semgrep** — static code pattern analysis
+
+   ```bash
+   cd "$WORKSPACE" && semgrep scan --config=auto --json src/ 2>/dev/null || true
+   ```
+
+   The `/usr/local/bin/semgrep` wrapper delegates to Docker automatically; no extra flags needed.
+
+   **3.5 [MANDATORY] ESLint** — code style and quality lint (requires `node_modules` — see prerequisite below)
+
+   ```bash
+   cd "$WORKSPACE" && npx eslint src/ --format json 2>/dev/null || true
+   ```
+
+   **3.6 [MANDATORY] TypeScript compile check** — must be run even if ESLint passes cleanly
+
+   ```bash
+   cd "$WORKSPACE" && npx tsc --noEmit 2>&1; echo "tsc exit: $?"
+   ```
+
+   Record the exit code and any error output in `quality-results.json`. A clean exit (0 errors) is a passing `info` finding.
+
+   **3.7 [MANDATORY] Test suite and coverage** — must be run to report line/branch/function percentages
+
+   ```bash
+   cd "$WORKSPACE" && npx vitest --run --coverage 2>&1 | tail -30
+   ```
+
+   Parse `coverage/coverage-summary.json` (or equivalent) for totals. Record line coverage in `quality-results.json`. Line coverage below 80% is `severity: medium`; below 50% is `severity: high`.
+
+   **3.8 [MANDATORY] depcheck** — unused and missing dependencies
+
+   ```bash
+   cd "$WORKSPACE" && npx depcheck --json 2>/dev/null || true
+   ```
+
+   **3.9 [MANDATORY] OpenAPI breaking-change diff** (A28)
+
+   ```bash
+   git -C "$WORKSPACE" diff HEAD~1 HEAD -- docs/openapi.yaml 2>/dev/null
+   ```
+
+   Flag any removed endpoints, renamed/removed response fields, changed field types, or newly-required request fields as `severity: high`, `rule: breaking-change`, `category: api`.
+
+   **3.10 [MANDATORY] AI-powered code analysis** — read source files directly for issues static tools miss. Apply all checks in section 3b below (security S01–S31, quality rules, API rules A03–A28 including A25 directory structure and A26 Postman collection check, DB rules).
 
    **node_modules prerequisite**: ESLint, tsc, vitest, and npq all require `node_modules` to be installed. Before running any of these tools, check whether `node_modules/` exists in the cloned workspace. If not, install dependencies first:
 
@@ -180,6 +245,26 @@ You are an expert code auditor. When asked to audit a repository:
 
    Sort `contributors` by `commits` descending.
 
+---
+
+**⛔ PRE-REPORT VERIFICATION CHECKLIST** — verify every item below is complete before writing `results.json`. If any item is missing, go back and run the missing step now.
+
+| #    | Check                 | Required output                                                                                                                 |
+| ---- | --------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1  | npm audit run         | `$OUT_DIR/npm-audit.json` exists and is non-empty                                                                               |
+| 3.2  | npq run               | `$OUT_DIR/npq-raw.json` exists                                                                                                  |
+| 3.3  | gitleaks run          | `$OUT_DIR/gitleaks.json` exists; Helm/workflow files manually scanned                                                           |
+| 3.4  | semgrep run           | findings processed into `security-results.json`                                                                                 |
+| 3.5  | ESLint run            | findings processed into `quality-results.json`                                                                                  |
+| 3.6  | `tsc --noEmit` run    | exit code recorded; finding written to `quality-results.json`                                                                   |
+| 3.7  | vitest + coverage run | line/branch/function % recorded; finding written to `quality-results.json`                                                      |
+| 3.8  | depcheck run          | unused deps recorded in `quality-results.json`                                                                                  |
+| 3.9  | OpenAPI diff run      | result (pass or breaking changes) written to `api-results.json`                                                                 |
+| 3.10 | AI code analysis      | S01–S31 + quality + A03–A28 + DB checks applied                                                                                 |
+| 4    | Contributors          | `contributors.json` has non-zero `additions`/`deletions` from `git log --numstat`; enriched via `gh api repos/.../contributors` |
+
+---
+
 5. **Write output** to `reports/{owner}_{repo}/{run-id}/`:
    - `results.json` — following schema in `scripts/report-schema.json`; include `npm` and `npq` as separate categories in `results[]`
      **IMPORTANT**: Use actual timestamps captured at runtime:
@@ -192,7 +277,7 @@ You are an expert code auditor. When asked to audit a repository:
    - `report.md` — markdown summary
    - `report.html` — HTML report
 
-6. **Apply Phase 1 "Richer Findings" Enhancements** _(mandatory — run before generating reports)_:
+6. **⚠️ Apply Phase 1 "Richer Findings" Enhancements** _(MANDATORY — do NOT skip this step. It must run after `results.json` is written and before `report.md`/`report.html` are generated. Skipping it produces an incomplete audit.)_:
 
    After writing the initial `results.json` and **before** generating `report.md`/`report.html`, run the Phase 1 enhancement utilities from the `/workspace` directory:
 
@@ -204,15 +289,15 @@ You are an expert code auditor. When asked to audit a repository:
    This applies all Phase 1 enhancements plus Phase 2.4 in sequence:
    - **Baseline Suppression (1.1)** — Tags each finding `new` or `existing` vs the previous audit run
    - **Auto-fix Suggestions (1.2)** — Generates exact diff patches with two levels:
-     * **Basic fixes** for simple patterns (console.log, unused deps, `: any` types)
-     * **AI-enhanced fixes** using codebase context analysis for complex security and quality issues
+     - **Basic fixes** for simple patterns (console.log, unused deps, `: any` types)
+     - **AI-enhanced fixes** using codebase context analysis for complex security and quality issues
    - **Context-aware Severity (1.3)** — Downgrades severity for findings in test/docs/config files
    - **Cross-tool Deduplication (1.4)** — Merges duplicate findings reported by multiple tools
    - **Contributor Risk Attribution (2.4)** — Git blame analysis to identify which contributor introduced each flagged line
 
    **🤖 Agent-Driven Enhancement**: The auto-fix generator prepares rich context for you (the agent) to analyze and generate intelligent, context-aware fix suggestions during the audit. The findings will include:
    - **Code context**: Surrounding code snippets and project structure
-   - **Framework detection**: Identified project patterns (React, Prisma, Express, etc.)  
+   - **Framework detection**: Identified project patterns (React, Prisma, Express, etc.)
    - **Contextual suggestions**: Framework-specific fix recommendations
    - **Agent prompt**: Structured guidance for generating optimal fixes
 
