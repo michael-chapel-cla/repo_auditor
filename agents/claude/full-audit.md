@@ -106,12 +106,16 @@ Run all Phase 1 enhancements to reduce false positives and make findings actiona
 node utils/apply-phase1-enhancements.js "$OUT_DIR/results.json" "$REPORTS_DIR" "$WORKSPACE"
 ```
 
-This applies all four Phase 1 enhancements in sequence:
+This applies all Phase 1 enhancements in sequence:
 
 1. **Baseline Suppression (1.1)** — Compares against previous audit, marks findings as `new` or `existing`
-2. **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple issues (console.log, unused deps, `: any`)  
+2. **Auto-fix Suggestions (1.2)** — Generates exact diff patches:
+   - **Basic fixes** for simple patterns (console.log, unused deps, `: any`)
+   - **AI-enhanced fixes** with codebase context analysis for complex security and quality issues
 3. **Context-aware Severity (1.3)** — Adjusts severity based on file context (e.g., Math.random() in test files → info)
 4. **Cross-tool Deduplication (1.4)** — Merges duplicate findings from different tools into single entries
+
+**🤖 Agent-Driven Enhancement**: The auto-fix generator prepares rich context for you (the agent) to analyze and generate intelligent, context-aware fix suggestions. Findings marked with `requiresAgentAnalysis: true` will include code context, framework detection, and structured prompts for you to generate optimal fixes based on the project's patterns and dependencies.
 
 The `results.json` file is updated with enhanced finding metadata and comprehensive summary statistics.
 

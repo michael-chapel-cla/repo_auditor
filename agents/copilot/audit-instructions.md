@@ -201,13 +201,29 @@ You are an expert code auditor. When asked to audit a repository:
    node utils/apply-phase1-enhancements.js "$OUT_DIR/results.json" "$REPORTS_DIR" "$WORKSPACE"
    ```
 
-   This applies all four Phase 1 enhancements in sequence:
+   This applies all Phase 1 enhancements in sequence:
    - **Baseline Suppression (1.1)** — Tags each finding `new` or `existing` vs the previous audit run
-   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple fixable issues
+   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches with two levels:
+     * **Basic fixes** for simple patterns (console.log, unused deps, `: any` types)
+     * **AI-enhanced fixes** using codebase context analysis for complex security and quality issues
    - **Context-aware Severity (1.3)** — Downgrades severity for findings in test/docs/config files
    - **Cross-tool Deduplication (1.4)** — Merges duplicate findings reported by multiple tools
 
-   The script updates `results.json` in-place. The final `results.json` (after this step) is the authoritative output. Do not skip this step — it reduces false positives and may change finding counts and the overall score used in `report.md`.
+   **🤖 Agent-Driven Enhancement**: The auto-fix generator prepares rich context for you (the agent) to analyze and generate intelligent, context-aware fix suggestions during the audit. The findings will include:
+   - **Code context**: Surrounding code snippets and project structure
+   - **Framework detection**: Identified project patterns (React, Prisma, Express, etc.)  
+   - **Contextual suggestions**: Framework-specific fix recommendations
+   - **Agent prompt**: Structured guidance for generating optimal fixes
+
+   **For findings marked with `requiresAgentAnalysis: true`**, analyze the provided context and generate specific auto-fixes:
+   - SQL injection → Use detected ORM (Prisma/Sequelize/Knex) for parameterized queries
+   - XSS vulnerabilities → Apply framework-specific sanitization (React/Vue patterns)
+   - Hardcoded secrets → Environment variable migration with project conventions
+   - Type issues → Context-aware TypeScript improvements
+
+   Generate exact diff patches using project patterns and dependencies identified in the context.
+
+   The script updates `results.json` in-place. The final `results.json` (after this step) is the authoritative output. Do not skip this step — it significantly enhances fix quality and may change finding counts.
 
 7. **Commit and push** the reports back to the repo (or upload as workflow artifacts).
 

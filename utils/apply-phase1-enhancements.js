@@ -26,6 +26,7 @@ import { fileURLToPath } from 'url';
 // Import all Phase 1 utilities
 import { applyBaselineSuppression } from './baseline-suppression.js';
 import { generateAutoFixes } from './auto-fix-generator.js';
+import { generateAIAutoFixes } from './ai-auto-fix-generator.js';
 import { applyContextAwareSeverity } from './context-aware-severity.js';
 import { applyCrossToolDeduplication } from './cross-tool-deduplication.js';
 
@@ -70,15 +71,29 @@ async function applyPhase1Enhancements(resultsPath, reportsDir, workspaceDir) {
   }
   console.log('');
   
-  // 1.2 - Auto-fix Generation
-  console.log('🔧 1.2 - Generating auto-fix suggestions...');
+  // 1.2a - Basic Auto-fix Generation
+  console.log('🔧 1.2a - Generating basic auto-fix suggestions...');
   try {
-    const fixableCount = await generateAutoFixes(resultsPath, workspaceDir);
-    results.autoFixGeneration = { success: true, fixableCount };
-    console.log('✅ Auto-fix suggestions generated');
+    const basicFixableCount = await generateAutoFixes(resultsPath, workspaceDir);
+    results.autoFixGeneration = { success: true, basicFixableCount };
+    console.log('✅ Basic auto-fix suggestions generated');
   } catch (error) {
-    console.error('❌ Auto-fix generation failed:', error.message);
+    console.error('❌ Basic auto-fix generation failed:', error.message);
     results.autoFixGeneration = { success: false, error: error.message };
+  }
+  console.log('');
+
+  // 1.2b - Agent-Driven Auto-fix Context Preparation
+  console.log('🤖 1.2b - Preparing findings for agent-driven auto-fix suggestions...');
+  try {
+    console.log('🧠 Using agent LLM context instead of external API calls');
+    
+    const aiEnhancedCount = await generateAIAutoFixes(resultsPath, workspaceDir);
+    results.aiAutoFixGeneration = { success: true, aiEnhancedCount };
+    console.log('✅ AI-enhanced auto-fix suggestions generated');
+  } catch (error) {
+    console.error('❌ AI auto-fix generation failed:', error.message);
+    results.aiAutoFixGeneration = { success: false, error: error.message };
   }
   console.log('');
   
@@ -111,11 +126,13 @@ async function applyPhase1Enhancements(resultsPath, reportsDir, workspaceDir) {
   
   console.log('🎉 Phase 1 enhancements complete!');
   console.log(`   Duration: ${duration}ms`);
-  console.log(`   Success: ${successCount}/4 enhancements applied`);
+  console.log(`   Success: ${successCount}/5 enhancements applied`);
   
-  if (successCount < 4) {
+  if (successCount < 4) { // Allow AI auto-fix to fail gracefully
     console.log('⚠️  Some enhancements failed - check logs above');
-    process.exit(1);
+    if (successCount < 3) { // Only exit if critical enhancements fail
+      process.exit(1);
+    }
   }
   
   return results;

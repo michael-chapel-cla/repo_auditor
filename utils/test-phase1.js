@@ -85,6 +85,30 @@ function generateMockResults() {
             "line": 15,
             "rule": "S04",
             "source": "ai"
+          },
+          {
+            "id": "sec-004",
+            "category": "security",
+            "severity": "high", 
+            "title": "Cross-Site Scripting (XSS) vulnerability",
+            "description": "User input displayed without sanitization",
+            "file": "src/components/UserProfile.jsx",
+            "line": 28,
+            "rule": "S06",
+            "cwe": "CWE-79",
+            "source": "semgrep"
+          },
+          {
+            "id": "sec-005",
+            "category": "security",
+            "severity": "critical",
+            "title": "Hardcoded API key detected", 
+            "description": "Hardcoded secret found in source code",
+            "file": "src/config/api.js",
+            "line": 5,
+            "rule": "S03",
+            "cwe": "CWE-798",
+            "source": "gitleaks"
           }
         ]
       },
@@ -142,10 +166,13 @@ async function createMockWorkspace(workspaceDir) {
     "name": "test-project",
     "dependencies": {
       "express": "^4.18.0",
-      "lodash": "^4.17.21"
+      "lodash": "^4.17.21",
+      "react": "^18.2.0",
+      "prisma": "^5.0.0"
     },
     "devDependencies": {
-      "typescript": "^5.0.0"
+      "typescript": "^5.0.0",
+      "jest": "^29.5.0"
     }
   };
   
@@ -188,6 +215,60 @@ describe('Auth tests', () => {
   
   await mkdir(join(workspaceDir, 'test/fixtures'), { recursive: true });
   await writeFile(join(workspaceDir, 'test/fixtures/auth.spec.js'), testCode);
+  
+  // Mock SQL injection vulnerable code
+  const sqlCode = `
+const express = require('express');
+const mysql = require('mysql2');
+
+app.get('/users/:id', (req, res) => {
+  const userId = req.params.id;
+  // Vulnerable: SQL injection
+  const query = 'SELECT * FROM users WHERE id = ' + userId;
+  db.query(query, (err, results) => {
+    if (err) throw err;
+    res.json(results[0]);
+  });
+});
+`;
+  
+  await mkdir(join(workspaceDir, 'src/controllers'), { recursive: true });
+  await writeFile(join(workspaceDir, 'src/controllers/user.js'), sqlCode);
+  
+  // Mock XSS vulnerable React component
+  const xssCode = `
+import React from 'react';
+
+function UserProfile({ user }) {
+  return (
+    <div>
+      <h1>Welcome {user.name}</h1>
+      {/* Vulnerable: XSS */}
+      <div dangerouslySetInnerHTML={{ __html: user.bio }} />
+    </div>
+  );
+}
+
+export default UserProfile;
+`;
+  
+  await mkdir(join(workspaceDir, 'src/components'), { recursive: true });
+  await writeFile(join(workspaceDir, 'src/components/UserProfile.jsx'), xssCode);
+  
+  // Mock hardcoded secret
+  const secretCode = `
+const config = {
+  apiUrl: 'https://api.example.com',
+  // Vulnerable: hardcoded secret
+  apiKey: 'sk-1234567890abcdef1234567890abcdef',
+  timeout: 5000
+};
+
+module.exports = config;
+`;
+  
+  await mkdir(join(workspaceDir, 'src/config'), { recursive: true });
+  await writeFile(join(workspaceDir, 'src/config/api.js'), secretCode);
 }
 
 /**

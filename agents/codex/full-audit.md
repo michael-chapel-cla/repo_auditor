@@ -128,11 +128,15 @@ Read migration `.sql` files and ORM/repository source files. Analyze for:
    node utils/apply-phase1-enhancements.js "reports/${slug}/${uuid}/results.json" "reports/" "workspace/${slug}"
    ```
 
-   This applies all four Phase 1 enhancements:
+   This applies all Phase 1 enhancements:
    - **Baseline Suppression (1.1)** — Marks findings as `new` or `existing` vs previous audit
-   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches for simple issues  
+   - **Auto-fix Suggestions (1.2)** — Generates exact diff patches:
+     * Basic fixes for simple patterns (console.log, unused deps, `: any`)
+     * AI-enhanced fixes with codebase context analysis for complex security/quality issues
    - **Context-aware Severity (1.3)** — Adjusts severity based on file context
    - **Cross-tool Deduplication (1.4)** — Merges duplicate findings from different tools
+   
+   **🤖 Agent-Driven Enhancement**: The auto-fix generator prepares rich context for you (the agent) to analyze and generate intelligent, context-aware fix suggestions. Findings marked with `requiresAgentAnalysis: true` will include code context, framework detection, and structured prompts for optimal fixes.
 
 7. Delete the cloned repository from the workspace:
 
