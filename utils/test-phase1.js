@@ -12,6 +12,7 @@
 
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { execSync } from 'child_process';
 import { applyPhase1Enhancements } from './apply-phase1-enhancements.js';
 
 /**
@@ -272,6 +273,51 @@ module.exports = config;
 }
 
 /**
+ * Initialize git repo with commits for blame testing
+ */
+async function initializeGitRepo(workspaceDir) {
+  // Initialize git repo
+  execSync(`cd "${workspaceDir}" && git init --quiet`, { encoding: 'utf8' });
+  
+  // Configure git user
+  execSync(`cd "${workspaceDir}" && git config user.email "test@example.com"`, { encoding: 'utf8' });
+  execSync(`cd "${workspaceDir}" && git config user.name "Test User"`, { encoding: 'utf8' });
+  
+  // Add initial commit
+  execSync(`cd "${workspaceDir}" && git add .`, { encoding: 'utf8' });
+  execSync(`cd "${workspaceDir}" && git commit -m "Initial commit with vulnerable code" --quiet`, { encoding: 'utf8' });
+  
+  // Simulate a second developer making changes
+  execSync(`cd "${workspaceDir}" && git config user.email "dev2@example.com"`, { encoding: 'utf8' });
+  execSync(`cd "${workspaceDir}" && git config user.name "Developer Two"`, { encoding: 'utf8' });
+  
+  // Modify one of the vulnerable files
+  const userJsPath = join(workspaceDir, 'src/controllers/user.js');
+  const updatedCode = `
+const express = require('express');
+const mysql = require('mysql2');
+
+app.get('/users/:id', (req, res) => {
+  const userId = req.params.id;
+  // Vulnerable: SQL injection (modified by dev2)
+  const query = 'SELECT * FROM users WHERE id = ' + userId + ' AND active = 1';
+  db.query(query, (err, results) => {
+    if (err) throw err;
+    res.json(results[0]);
+  });
+});
+`;
+  
+  await writeFile(userJsPath, updatedCode);
+  execSync(`cd "${workspaceDir}" && git add src/controllers/user.js`, { encoding: 'utf8' });
+  execSync(`cd "${workspaceDir}" && git commit -m "Add user filtering to query" --quiet`, { encoding: 'utf8' });
+  
+  // Switch back to original user
+  execSync(`cd "${workspaceDir}" && git config user.email "test@example.com"`, { encoding: 'utf8' });
+  execSync(`cd "${workspaceDir}" && git config user.name "Test User"`, { encoding: 'utf8' });
+}
+
+/**
  * Run the Phase 1 test
  */
 async function runPhase1Test() {
@@ -299,6 +345,14 @@ async function runPhase1Test() {
     await createMockWorkspace(workspaceDir);
     console.log(`📂 Created mock workspace: ${workspaceDir}`);
     
+    // Initialize git repo for blame testing
+    try {
+      await initializeGitRepo(workspaceDir);
+      console.log(`📝 Initialized git repo with commits: ${workspaceDir}`);
+    } catch (error) {
+      console.log(`⚠️  Could not initialize git repo (${error.message}) - risk attribution will be limited`);
+    }
+    
     // Run Phase 1 enhancements
     console.log('');
     const results = await applyPhase1Enhancements(resultsPath, testDir, workspaceDir);
@@ -310,6 +364,7 @@ async function runPhase1Test() {
     console.log(`   Auto-fix generation: ${results.autoFixGeneration.success ? '✅' : '❌'} (${results.autoFixGeneration.fixableCount || 0} fixable)`);
     console.log(`   Context-aware severity: ${results.contextAwareSeverity.success ? '✅' : '❌'} (${results.contextAwareSeverity.adjustedCount || 0} adjusted)`);
     console.log(`   Cross-tool deduplication: ${results.crossToolDeduplication.success ? '✅' : '❌'} (${results.crossToolDeduplication.reductionCount || 0} reduced)`);
+    console.log(`   Risk attribution: ${results.contributorRiskAttribution.success ? '✅' : '❌'} (${results.contributorRiskAttribution.attributedCount || 0} attributed)`);
     
     console.log('');
     console.log('✅ All Phase 1 utilities are working correctly across agent types!');

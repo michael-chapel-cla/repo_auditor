@@ -8,6 +8,19 @@ export interface ContributorStats {
   deletions?: number;
   firstCommitAt?: string;
   lastCommitAt?: string;
+  // Risk attribution fields
+  totalRiskScore?: number;
+  findingsCount?: number;
+  averageRiskPerFinding?: number;
+  severityBreakdown?: {
+    critical: number;
+    high: number;
+    medium: number;
+    low: number;
+    info: number;
+  };
+  categories?: string[];
+  isBot?: boolean;
 }
 
 export interface ContributorRun {
@@ -16,6 +29,32 @@ export interface ContributorRun {
   startedAt?: string;
   agentTool?: string;
   hasFullStats: boolean;
+  hasRiskAttribution?: boolean;
+}
+
+export interface RiskAttribution {
+  repoFullName: string;
+  generatedAt: string;
+  analysis: {
+    totalFindings: number;
+    analyzedFindings: number;
+    coveragePercentage: number;
+  };
+  contributors: ContributorStats[];
+  riskTimeline: Array<{
+    week: string;
+    weekStart: string;
+    totalRisk: number;
+    findingsCount: number;
+    contributors: number;
+  }>;
+  summary: {
+    totalContributors: number;
+    totalRiskScore: number;
+    highestRiskContributor: string | null;
+    averageRiskPerContributor: number;
+    botsDetected: number;
+  };
 }
 
 export const contributorsService = {
@@ -32,12 +71,14 @@ export const contributorsService = {
     repoFullName: string;
     contributors: ContributorStats[];
     hasFullStats: boolean;
+    riskAttribution?: RiskAttribution;
   }> {
     const { data } = await axios.get<{
       results: {
         repoFullName: string;
         contributors: ContributorStats[];
         hasFullStats: boolean;
+        riskAttribution?: RiskAttribution;
       }[];
     }>("/api/contributors", { params: { auditId } });
     const entry = data.results[0];

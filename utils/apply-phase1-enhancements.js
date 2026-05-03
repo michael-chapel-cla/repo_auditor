@@ -29,6 +29,7 @@ import { generateAutoFixes } from './auto-fix-generator.js';
 import { generateAIAutoFixes } from './ai-auto-fix-generator.js';
 import { applyContextAwareSeverity } from './context-aware-severity.js';
 import { applyCrossToolDeduplication } from './cross-tool-deduplication.js';
+import { applyContributorRiskAttribution } from './contributor-risk-attribution.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -121,12 +122,30 @@ async function applyPhase1Enhancements(resultsPath, reportsDir, workspaceDir) {
   }
   console.log('');
   
+  // 2.4 - Contributor Risk Attribution (Phase 2)
+  if (workspaceDir) {
+    console.log('👥 2.4 - Applying contributor risk attribution...');
+    try {
+      const attributedCount = await applyContributorRiskAttribution(resultsPath, workspaceDir);
+      results.contributorRiskAttribution = { success: true, attributedCount };
+      console.log('✅ Contributor risk attribution applied');
+    } catch (error) {
+      console.error('❌ Contributor risk attribution failed:', error.message);
+      results.contributorRiskAttribution = { success: false, error: error.message };
+    }
+    console.log('');
+  } else {
+    console.log('👥 2.4 - Skipping contributor risk attribution (no workspace provided)');
+    results.contributorRiskAttribution = { success: false, error: 'No workspace directory provided' };
+    console.log('');
+  }
+  
   const duration = Date.now() - startTime;
   const successCount = Object.values(results).filter(r => r.success).length;
   
-  console.log('🎉 Phase 1 enhancements complete!');
+  console.log('🎉 Phase 1 + 2.4 enhancements complete!');
   console.log(`   Duration: ${duration}ms`);
-  console.log(`   Success: ${successCount}/5 enhancements applied`);
+  console.log(`   Success: ${successCount}/6 enhancements applied`);
   
   if (successCount < 4) { // Allow AI auto-fix to fail gracefully
     console.log('⚠️  Some enhancements failed - check logs above');

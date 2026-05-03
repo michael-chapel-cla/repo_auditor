@@ -117,7 +117,9 @@ This applies all Phase 1 enhancements in sequence:
 
 **🤖 Agent-Driven Enhancement**: The auto-fix generator prepares rich context for you (the agent) to analyze and generate intelligent, context-aware fix suggestions. Findings marked with `requiresAgentAnalysis: true` will include code context, framework detection, and structured prompts for you to generate optimal fixes based on the project's patterns and dependencies.
 
-The `results.json` file is updated with enhanced finding metadata and comprehensive summary statistics.
+**👥 Risk Attribution (Phase 2.4)**: Git blame analysis attributes each finding to the contributor who introduced the flagged line, providing insights into code quality patterns and helping teams understand risk distribution (informational, not punitive).
+
+The `results.json` file is updated with enhanced finding metadata, comprehensive summary statistics, and contributor risk attribution data.
 
 ### Step 7 — Cleanup
 

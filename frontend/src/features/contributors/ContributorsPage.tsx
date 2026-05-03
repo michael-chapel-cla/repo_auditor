@@ -20,15 +20,22 @@ import {
 import {
   AreaChart,
   Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 import { contributorsService } from "../../services/contributors.service.ts";
 import type {
   ContributorStats,
   ContributorRun,
+  RiskAttribution,
 } from "../../services/contributors.service.ts";
 
 export default function ContributorsPage() {
@@ -36,6 +43,7 @@ export default function ContributorsPage() {
   const [selectedAuditId, setSelectedAuditId] = useState<string>("");
   const [contributors, setContributors] = useState<ContributorStats[]>([]);
   const [hasFullStats, setHasFullStats] = useState(false);
+  const [riskAttribution, setRiskAttribution] = useState<RiskAttribution | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +72,7 @@ export default function ContributorsPage() {
       .then((data) => {
         setContributors(data.contributors ?? []);
         setHasFullStats(data.hasFullStats);
+        setRiskAttribution(data.riskAttribution ?? null);
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
@@ -188,6 +197,14 @@ export default function ContributorsPage() {
                   <TableCell sx={{ color: "#fff", fontWeight: "bold" }}>
                     Last Commit
                   </TableCell>
+                  {riskAttribution && (
+                    <TableCell 
+                      sx={{ color: "#fff", fontWeight: "bold" }}
+                      align="right"
+                    >
+                      Risk Score
+                    </TableCell>
+                  )}
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -226,11 +243,164 @@ export default function ContributorsPage() {
                         ? new Date(c.lastCommitAt).toLocaleDateString()
                         : "—"}
                     </TableCell>
+                    {riskAttribution && (
+                      <TableCell 
+                        align="right"
+                        sx={{ 
+                          color: c.totalRiskScore && c.totalRiskScore > 0 ? "#d32f2f" : "inherit",
+                          fontWeight: c.totalRiskScore && c.totalRiskScore > 0 ? "bold" : "normal"
+                        }}
+                      >
+                        {c.totalRiskScore || 0}
+                        {c.findingsCount && c.findingsCount > 0 && (
+                          <Typography variant="caption" display="block" color="text.secondary">
+                            {c.findingsCount} findings
+                          </Typography>
+                        )}
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
           </TableContainer>
+
+          {/* Risk Attribution Section */}
+          {riskAttribution && (
+            <>
+              <Typography variant="h6" gutterBottom sx={{ mt: 4 }}>
+                Risk Attribution
+              </Typography>
+              
+              <Alert severity="info" sx={{ mb: 2 }}>
+                <Typography variant="body2">
+                  Risk attribution shows which contributors introduced lines flagged by security/quality audits. 
+                  Coverage: {riskAttribution.analysis.analyzedFindings}/{riskAttribution.analysis.totalFindings} findings ({riskAttribution.analysis.coveragePercentage}%) 
+                  — informational only, not punitive.
+                </Typography>
+              </Alert>
+
+              {/* Risk Timeline Chart */}
+              <Typography variant="subtitle1" gutterBottom>
+                Risk Introduction Timeline (Last 26 Weeks)
+              </Typography>
+              <Box sx={{ height: 200, mb: 3 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={riskAttribution.riskTimeline}>
+                    <XAxis dataKey="week" />
+                    <YAxis />
+                    <Tooltip 
+                      labelFormatter={(value) => `Week ${value}`}
+                      formatter={(value: number, name: string) => [
+                        value,
+                        name === 'totalRisk' ? 'Risk Score' : 'Findings'
+                      ]}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="totalRisk"
+                      stroke="#d32f2f"
+                      fill="#ffebee"
+                      name="totalRisk"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </Box>
+
+              {/* Risk by Contributor Bar Chart */}
+              <Typography variant="subtitle1" gutterBottom>
+                Risk Score by Contributor (Top 10)
+              </Typography>
+              <Box sx={{ height: 250, mb: 3 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={riskAttribution.contributors.slice(0, 10)}>
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value: number, name: string) => [
+                        value,
+                        name === 'totalRiskScore' ? 'Risk Score' : name
+                      ]}
+                    />
+                    <Bar dataKey="totalRiskScore" fill="#f44336" name="totalRiskScore" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+
+              {/* Severity Breakdown Pie Chart */}
+              <Typography variant="subtitle1" gutterBottom>
+                Findings by Severity
+              </Typography>
+              <Box sx={{ height: 250, mb: 3 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Critical', value: riskAttribution.contributors.reduce((sum, c) => sum + (c.severityBreakdown?.critical || 0), 0), fill: '#d32f2f' },
+                        { name: 'High', value: riskAttribution.contributors.reduce((sum, c) => sum + (c.severityBreakdown?.high || 0), 0), fill: '#f57c00' },
+                        { name: 'Medium', value: riskAttribution.contributors.reduce((sum, c) => sum + (c.severityBreakdown?.medium || 0), 0), fill: '#fbc02d' },
+                        { name: 'Low', value: riskAttribution.contributors.reduce((sum, c) => sum + (c.severityBreakdown?.low || 0), 0), fill: '#388e3c' },
+                        { name: 'Info', value: riskAttribution.contributors.reduce((sum, c) => sum + (c.severityBreakdown?.info || 0), 0), fill: '#1976d2' },
+                      ].filter(item => item.value > 0)}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label
+                    >
+                      {[
+                        { name: 'Critical', value: 1, fill: '#d32f2f' },
+                        { name: 'High', value: 1, fill: '#f57c00' },
+                        { name: 'Medium', value: 1, fill: '#fbc02d' },
+                        { name: 'Low', value: 1, fill: '#388e3c' },
+                        { name: 'Info', value: 1, fill: '#1976d2' },
+                      ].map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+
+              {/* Risk Summary Stats */}
+              <Typography variant="subtitle1" gutterBottom>
+                Risk Summary
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+                <Paper sx={{ p: 2, minWidth: 150 }}>
+                  <Typography variant="h6" color="error">
+                    {riskAttribution.summary.totalRiskScore}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Total Risk Score
+                  </Typography>
+                </Paper>
+                <Paper sx={{ p: 2, minWidth: 150 }}>
+                  <Typography variant="h6">
+                    {riskAttribution.summary.totalContributors}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Contributors with Findings
+                  </Typography>
+                </Paper>
+                <Paper sx={{ p: 2, minWidth: 150 }}>
+                  <Typography variant="h6">
+                    {riskAttribution.summary.averageRiskPerContributor.toFixed(1)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Average Risk per Contributor
+                  </Typography>
+                </Paper>
+              </Box>
+            </>
+          )}
         </>
       )}
 

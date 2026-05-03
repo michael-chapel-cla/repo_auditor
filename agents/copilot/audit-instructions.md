@@ -201,13 +201,14 @@ You are an expert code auditor. When asked to audit a repository:
    node utils/apply-phase1-enhancements.js "$OUT_DIR/results.json" "$REPORTS_DIR" "$WORKSPACE"
    ```
 
-   This applies all Phase 1 enhancements in sequence:
+   This applies all Phase 1 enhancements plus Phase 2.4 in sequence:
    - **Baseline Suppression (1.1)** — Tags each finding `new` or `existing` vs the previous audit run
    - **Auto-fix Suggestions (1.2)** — Generates exact diff patches with two levels:
      * **Basic fixes** for simple patterns (console.log, unused deps, `: any` types)
      * **AI-enhanced fixes** using codebase context analysis for complex security and quality issues
    - **Context-aware Severity (1.3)** — Downgrades severity for findings in test/docs/config files
    - **Cross-tool Deduplication (1.4)** — Merges duplicate findings reported by multiple tools
+   - **Contributor Risk Attribution (2.4)** — Git blame analysis to identify which contributor introduced each flagged line
 
    **🤖 Agent-Driven Enhancement**: The auto-fix generator prepares rich context for you (the agent) to analyze and generate intelligent, context-aware fix suggestions during the audit. The findings will include:
    - **Code context**: Surrounding code snippets and project structure
