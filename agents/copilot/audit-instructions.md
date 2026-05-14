@@ -271,6 +271,7 @@ You are an expert code auditor. When asked to audit a repository.
      - `"startedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` at the beginning of the audit (before cloning)
      - `"completedAt"` — capture with `date -u +"%Y-%m-%dT%H:%M:%SZ"` when writing final results (Step 5)
      - `"agentTool": "copilot"`
+     - `"repoFullName": "$TARGET_REPO"` — **use exactly the key `repoFullName`, NOT `repo`** — the dashboard will show a blank name if this key is wrong
    - `npm-audit.json` — raw unmodified output of `npm audit --json` (preserved for UI display)
    - `npq-raw.json` — raw npq `--dry-run --plain` output (text, not JSON)
    - `contributors.json` — contributor stats (see step 4)
